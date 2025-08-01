@@ -31,10 +31,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-desktop-reports
-          path: lhci-results/desktop/*.html
+          path: results/desktop/*.html
 
       - name: Upload Reports (Mobile)
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-mobile-reports
-          path: lhci-results/mobile/*.html
+          path: results/mobile/*.html
