@@ -22,10 +22,10 @@ jobs:
         run: npm install -g @lhci/cli
 
       - name: Run Lighthouse (Desktop)
-        run: lhci autorun --config=.lighthouserc.js
+        run: lhci autorun --config=lighthouserc.js
 
       - name: Run Lighthouse (Mobile)
-        run: lhci autorun --config=.lighthouserc_mobile.js
+        run: lhci autorun --config=lighthouserc_mobile.js
 
       - name: Upload Reports (Desktop)
         uses: actions/upload-artifact@v4
