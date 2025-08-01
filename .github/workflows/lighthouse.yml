@@ -1,8 +1,8 @@
-name: Run Lighthouse CI
+name: Lighthouse - Desktop & Mobile
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * *'  # 매일 자정 UTC
   workflow_dispatch:
 
 jobs:
@@ -10,22 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: 18
 
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
 
-      - name: Run Lighthouse CI
-        run: lhci autorun
+      - name: Run Lighthouse (Desktop)
+        run: lhci autorun --config=.lighthouserc.js
 
-      - name: Upload HTML report
-        uses: actions/upload-artifact@v4 # 또는 @v4
+      - name: Run Lighthouse (Mobile)
+        run: lhci autorun --config=.lighthouserc_mobile.js
+
+      - name: Upload Reports (Desktop)
+        uses: actions/upload-artifact@v4
         with:
-          name: lighthouse-report
-          path: results/*.html
+          name: lighthouse-desktop-reports
+          path: lhci-results/desktop/*.html
+
+      - name: Upload Reports (Mobile)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-mobile-reports
+          path: lhci-results/mobile/*.html
