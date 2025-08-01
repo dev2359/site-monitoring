@@ -2,8 +2,8 @@ name: Run Lighthouse CI
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 매일 자정 UTC (한국 기준 오전 9시)
-  workflow_dispatch:      # 수동 실행도 가능
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   lighthouse:
@@ -24,8 +24,8 @@ jobs:
       - name: Run Lighthouse CI
         run: lhci autorun
 
-      - name: Upload HTML report as artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4 # 또는 @v4
         with:
           name: lighthouse-report
           path: results/*.html
