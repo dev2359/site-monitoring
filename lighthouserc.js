@@ -28,7 +28,7 @@ module.exports = {
     },
     upload: {
       target: 'filesystem',
-      outputDir: './results',
+      outputDir: './results/desktop',
       reportFilenamePattern: 'report-pc-<URL>-<DATE>-<INDEX>.<EXT>'
     }
   }
