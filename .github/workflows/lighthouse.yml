@@ -44,3 +44,15 @@ jobs:
         with:
           name: lighthouse-mobile-reports
           path: results/mobile/*.*
+
+      - name: Install Node dependencies
+        run: npm install cheerio || true
+
+      - name: Extract scores from JSON reports
+        run: node extract-scores.js
+
+      - name: Upload score CSVs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-scores
+          path: results/lighthouse-scores-*.csv
