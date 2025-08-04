@@ -27,14 +27,20 @@ jobs:
       - name: Run Lighthouse (Mobile)
         run: lhci autorun --config=lighthouserc_mobile.js
 
+      - name: List desktop result files
+        run: ls -al results/desktop || echo "❌ desktop 폴더 없음"
+
+      - name: List mobile result files
+        run: ls -al results/mobile || echo "❌ mobile 폴더 없음"
+
       - name: Upload Reports (Desktop)
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-desktop-reports
-          path: results/desktop/*.html
+          path: results/desktop/*.*
 
       - name: Upload Reports (Mobile)
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-mobile-reports
-          path: results/mobile/*.html
+          path: results/mobile/*.*
