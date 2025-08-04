@@ -24,3 +24,11 @@ function extractScores(reportDir, label) {
 
     csv += scoreRow.join(',') + '\n';
   });
+
+  const outputFile = `./results/lighthouse-scores-${label}.csv`;
+  fs.writeFileSync(outputFile, csv);
+  console.log(`✅ Saved ${outputFile}`);
+}
+
+extractScores('./results/desktop', 'desktop');
+extractScores('./results/mobile', 'mobile');
