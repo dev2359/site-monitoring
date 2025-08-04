@@ -1,34 +1,47 @@
 const fs = require('fs');
 const path = require('path');
 
-function extractScores(reportDir, label) {
-  const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
-  let csv = 'URL,Type,Performance,Accessibility,BestPractices,SEO\n';
+function extractScores(dir, typeLabel) {
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  const rows = [['URL', 'Type', 'Performance', 'Accessibility', 'BestPractices', 'SEO']];
 
-  files.forEach(file => {
-    const fullPath = path.join(reportDir, file);
-    const content = fs.readFileSync(fullPath, 'utf-8');
-    const json = JSON.parse(content);
+  for (const file of files) {
+    const fullPath = path.join(dir, file);
+    const raw = fs.readFileSync(fullPath, 'utf-8');
 
-    const url = json.finalUrl;
-    const categories = json.categories;
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      console.warn(`⚠️ JSON 파싱 실패: ${file}`);
+      continue;
+    }
 
-    const scoreRow = [
+    const url = data.finalUrl || '(unknown)';
+    const c = data.categories;
+
+    if (!c || !c.performance) {
+      console.warn(`⚠️ 유효하지 않은 Lighthouse 결과 파일: ${file}`);
+      continue;
+    }
+
+    const row = [
       url,
-      label,
-      categories.performance.score * 100,
-      categories.accessibility.score * 100,
-      categories['best-practices'].score * 100,
-      categories.seo.score * 100
+      typeLabel,
+      c.performance.score * 100,
+      c.accessibility?.score * 100 || '',
+      c['best-practices']?.score * 100 || '',
+      c.seo?.score * 100 || ''
     ];
 
-    csv += scoreRow.join(',') + '\n';
-  });
+    rows.push(row);
+  }
 
-  const outputFile = `./results/lighthouse-scores-${label}.csv`;
-  fs.writeFileSync(outputFile, csv);
-  console.log(`✅ Saved ${outputFile}`);
+  const csv = rows.map(row => row.join(',')).join('\n');
+  const outPath = `results/lighthouse-scores-${typeLabel}.csv`;
+  fs.writeFileSync(outPath, csv);
+  console.log(`✅ Saved ${outPath}`);
 }
 
-extractScores('./results/desktop', 'desktop');
-extractScores('./results/mobile', 'mobile');
+extractScores('results/desktop', 'desktop');
+extractScores('results/mobile', 'mobile');
