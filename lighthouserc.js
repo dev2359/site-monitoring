@@ -24,7 +24,16 @@ module.exports = {
       numberOfRuns: 1,
       output: ['html', 'json'], 
       settings: {
-        emulatedFormFactor: 'desktop'
+        emulatedFormFactor: 'desktop',     
+        throttling: {
+          rttMs: 40,
+          throughputKbps: 10240,
+          cpuSlowdownMultiplier: 1,
+          requestLatencyMs: 0,
+          downloadThroughputKbps: 0,
+          uploadThroughputKbps: 0,
+        },
+        throttlingMethod: 'devtools'
       }
     },
     upload: {
