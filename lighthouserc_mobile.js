@@ -22,6 +22,7 @@ module.exports = {
         'https://hedn.kr/product/detail.html?product_no=52'
        ],
       numberOfRuns: 1,
+      output: ['html', 'json'], 
       settings: {
         emulatedFormFactor: 'mobile'
       }
