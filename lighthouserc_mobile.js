@@ -19,7 +19,7 @@ module.exports = {
         'https://cleanery.co.kr',
         'https://cleanery.co.kr/product/detail.html?product_no=15',
         'https://hedn.kr',
-        'https://hedn.kr/product/detail.html?product_no=52'
+        'https://hedn.kr/product/detail.html?product_no=64'
        ],
       numberOfRuns: 1,
       output: ['html', 'json'], 
