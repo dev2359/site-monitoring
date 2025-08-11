@@ -50,6 +50,9 @@ jobs:
 
       - name: Extract scores from JSON reports
         run: node extract-scores.js
+        
+      - name: Show Lighthouse score summary
+        run: node extract-scores-console.js
 
       - name: Upload score CSVs
         uses: actions/upload-artifact@v4
