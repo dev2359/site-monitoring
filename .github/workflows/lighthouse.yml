@@ -32,6 +32,20 @@ jobs:
 
       - name: List mobile result files
         run: ls -al results/mobile || echo "❌ mobile 폴더 없음"
+        
+      - name: Append date to desktop reports
+        run: |
+          DATE=$(date +'%Y%m%d')
+          for f in results/desktop/*.*; do
+            mv "$f" "${f%.*}-$DATE.${f##*.}"
+          done
+
+      - name: Append date to mobile reports
+        run: |
+          DATE=$(date +'%Y%m%d')
+          for f in results/mobile/*.*; do
+            mv "$f" "${f%.*}-$DATE.${f##*.}"
+          done
 
       - name: Upload Reports (Desktop)
         uses: actions/upload-artifact@v4
