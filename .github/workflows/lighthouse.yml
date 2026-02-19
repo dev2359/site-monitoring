@@ -2,7 +2,7 @@ name: Lighthouse - Desktop & Mobile
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 매일 자정 UTC
+    - cron: '0 1 * * *'  # 매일 10:00 KST (UTC 01:00)
   workflow_dispatch:
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
 
       - name: List mobile result files
         run: ls -al results/mobile || echo "❌ mobile 폴더 없음"
-        
+
       - name: Append date to desktop reports
         run: |
           DATE=$(date +'%Y%m%d')
@@ -61,24 +61,32 @@ jobs:
           name: lighthouse-mobile-reports
           path: results/mobile/*.*
 
+      # (옵션) extract-scores.js가 cheerio를 쓴다면 유지
       - name: Install Node dependencies
-        run: npm install cheerio || true
+        run: npm install cheerio
 
-      - name: Extract scores from JSON reports
-        run: node extract-scores.js
-
+      # ✅ 딱 1번만 실행 (summary.json / summary.md / slack-payload.json / ai-input.json 생성)
       - name: Extract scores + build summaries
         run: node extract-scores.js
 
+      # ✅ Actions 화면에 표로 보기 좋게
       - name: Publish Job Summary
         run: |
           cat results/summary.md >> $GITHUB_STEP_SUMMARY
 
+      # ✅ AI 결과 파일 생성(placeholder라도 생성됨)
+      # - generate-ai-suggestions.js가 없다면 이 스텝은 제거하거나 파일을 추가하세요.
+      - name: Generate AI suggestions
+        run: node generate-ai-suggestions.js
+
+      # ✅ summary.json을 기준으로 Slack 알림 여부 결정(OK면 미전송)
       - name: Decide Slack notify
         id: notify
         run: |
           node -e "const s=require('./results/summary.json'); console.log('need='+(s.overall.status!=='OK'))" >> $GITHUB_OUTPUT
 
+      # ✅ WARN/CRIT일 때만 Slack 알림
+      # - secrets.SLACK_WEBHOOK_URL 필요
       - name: Notify Slack (WARN/CRIT only)
         if: steps.notify.outputs.need == 'true'
         uses: slackapi/slack-github-action@v2
@@ -87,6 +95,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
+      # ✅ 요약/AI 산출물도 아티팩트로 업로드 (추후 비교/공유 용)
       - name: Upload Summary Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -95,10 +104,5 @@ jobs:
             results/summary.json
             results/summary.md
             results/slack-payload.json
+            results/ai-input.json
             results/ai-suggestions.md
-        
-      - name: Show Lighthouse score summary
-        run: node extract-scores.js
-
-      - name: Generate AI suggestions
-        run: node generate-ai-suggestions.js
