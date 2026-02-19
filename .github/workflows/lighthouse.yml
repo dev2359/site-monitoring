@@ -73,6 +73,29 @@ jobs:
       - name: Publish Job Summary
         run: |
           cat results/summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Decide Slack notify
+        id: notify
+        run: |
+          node -e "const s=require('./results/summary.json'); console.log('need='+(s.overall.status!=='OK'))" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack (WARN/CRIT only)
+        if: steps.notify.outputs.need == 'true'
+        uses: slackapi/slack-github-action@v2
+        with:
+          payload-file-path: ./results/slack-payload.json
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Upload Summary Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-summary
+          path: |
+            results/summary.json
+            results/summary.md
+            results/slack-payload.json
+            results/ai-suggestions.md
         
       - name: Show Lighthouse score summary
         run: node extract-scores.js
