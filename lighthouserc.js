@@ -21,7 +21,7 @@ module.exports = {
         'https://hedn.kr',
         'https://hedn.kr/product/detail.html?product_no=64'
        ],
-      numberOfRuns: 1,
+      numberOfRuns: 3,
       output: ['html', 'json'], 
       settings: {
         emulatedFormFactor: 'desktop',     
