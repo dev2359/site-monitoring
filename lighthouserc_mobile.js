@@ -21,14 +21,14 @@ module.exports = {
         'https://hedn.kr',
         'https://hedn.kr/product/detail.html?product_no=64'
        ],
-      numberOfRuns: 1,
+      numberOfRuns: 3,
       output: ['html', 'json'], 
       settings: {
         emulatedFormFactor: 'mobile',              
         throttling: {
           rttMs: 40,
           throughputKbps: 10240,
-          cpuSlowdownMultiplier: 1,
+          cpuSlowdownMultiplier: 4,
           requestLatencyMs: 0,
           downloadThroughputKbps: 0,
           uploadThroughputKbps: 0,
