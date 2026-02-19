@@ -99,3 +99,6 @@ jobs:
         
       - name: Show Lighthouse score summary
         run: node extract-scores.js
+
+      - name: Generate AI suggestions
+        run: node generate-ai-suggestions.js
