@@ -66,6 +66,13 @@ jobs:
 
       - name: Extract scores from JSON reports
         run: node extract-scores.js
+
+      - name: Extract scores + build summaries
+        run: node extract-scores.js
+
+      - name: Publish Job Summary
+        run: |
+          cat results/summary.md >> $GITHUB_STEP_SUMMARY
         
       - name: Show Lighthouse score summary
         run: node extract-scores.js
