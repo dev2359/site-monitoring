@@ -24,6 +24,33 @@ function readJsonSafe(filePath) {
   }
 }
 
+function isManifestJson(data) {
+  return Array.isArray(data) && data.length > 0 && data[0]?.url && data[0]?.summary;
+}
+
+function extractFromManifest(manifestArray, device, file) {
+  const reps = manifestArray.filter((x) => x.isRepresentativeRun);
+  const rows = (reps.length ? reps : manifestArray).map((x) => ({
+    device,
+    file,
+    ok: true,
+    url: x.url,
+    performance: x.summary?.performance,
+    accessibility: x.summary?.accessibility,
+    bestPractices: x.summary?.["best-practices"] ?? x.summary?.bestPractices,
+    seo: x.summary?.seo,
+    metrics: {},
+  }));
+
+  const seen = new Set();
+  return rows.filter((r) => {
+    if (!r.url) return false;
+    if (seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
+  });
+}
+
 function toPct(score) {
   if (typeof score !== "number") return null;
   return Math.round(score * 100);
@@ -37,7 +64,6 @@ function statusFromPerf(perfScore01) {
 }
 
 function extractOneReport(reportJson) {
-  // Lighthouse JSON 구조 기준 (categories)
   const c = reportJson.categories || {};
   const audits = reportJson.audits || {};
 
@@ -46,8 +72,6 @@ function extractOneReport(reportJson) {
   const bestPractices = c["best-practices"]?.score;
   const seo = c.seo?.score;
 
-  // Core Web Vitals 관련(가능한 범위 내)
-  // 단, Lighthouse JSON에서 audit key는 버전에 따라 조금씩 달라질 수 있음
   const lcp = audits["largest-contentful-paint"]?.numericValue; // ms
   const cls = audits["cumulative-layout-shift"]?.numericValue;
   const tbt = audits["total-blocking-time"]?.numericValue; // ms
@@ -82,7 +106,11 @@ function loadReports({ dir, device }) {
     const data = readJsonSafe(fullPath);
     if (!data) continue;
 
-    // 유효하지 않은 결과(runtimeError 등)는 별도 처리
+    if (isManifestJson(data)) {
+      items.push(...extractFromManifest(data, device, file));
+      continue;
+    }
+
     if (!data.categories) {
       items.push({
         device,
@@ -108,7 +136,6 @@ function loadReports({ dir, device }) {
     });
   }
 
-  // URL 기준 정렬(보기 좋게)
   items.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
   return items;
 }
@@ -121,10 +148,8 @@ function buildSummary(allItems) {
     okItems[0] || null
   );
 
-  // 전체 상태는 worst 기준
   const overallStatus = worst ? statusFromPerf(worst.performance) : "UNKNOWN";
 
-  // 문제 URL 리스트 (WARN/CRIT)
   const problems = okItems
     .filter((x) => statusFromPerf(x.performance) !== "OK")
     .sort((a, b) => a.performance - b.performance);
@@ -153,7 +178,7 @@ function buildSummary(allItems) {
       seo: p.seo,
       metrics: p.metrics,
     })),
-    // Slack/리포트 표에 쓰기 좋은 전체 목록
+    
     items: okItems.map((x) => ({
       device: x.device,
       url: x.url,
