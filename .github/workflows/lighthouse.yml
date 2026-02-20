@@ -79,6 +79,9 @@ jobs:
       - name: Generate AI suggestions
         run: node generate-ai-suggestions.js
 
+      - name: Build Slack payload (includes AI)
+        run: node build-slack-payload.js
+
       # ✅ summary.json을 기준으로 Slack 알림 여부 결정(OK면 미전송)
       - name: Decide Slack notify
         id: notify
