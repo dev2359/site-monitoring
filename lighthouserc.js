@@ -3,7 +3,7 @@ module.exports = {
     collect: {
       url: [
         'https://wellit.co.kr',
-        'https://wellit.co.kr/product/detail.html?product_no=202',
+        'https://wellit.co.kr/product/detail.html?product_no=202'
        ],
       numberOfRuns: 3,
       output: ['html', 'json'], 
