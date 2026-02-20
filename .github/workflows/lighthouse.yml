@@ -94,9 +94,9 @@ jobs:
         if: steps.notify.outputs.need == 'true'
         uses: slackapi/slack-github-action@v2
         with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload-file-path: ./results/slack-payload.json
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # ✅ 요약/AI 산출물도 아티팩트로 업로드 (추후 비교/공유 용)
       - name: Upload Summary Artifacts
