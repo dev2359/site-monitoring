@@ -76,8 +76,12 @@ jobs:
 
       # ✅ AI 결과 파일 생성(placeholder라도 생성됨)
       # - generate-ai-suggestions.js가 없다면 이 스텝은 제거하거나 파일을 추가하세요.
-      - name: Generate AI suggestions
+      - name: Generate AI suggestions (OpenAI)
         run: node generate-ai-suggestions.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1-mini
+          OPENAI_MAX_OUTPUT_TOKENS: "650"
 
       - name: Build Slack payload (includes AI)
         run: node build-slack-payload.js
