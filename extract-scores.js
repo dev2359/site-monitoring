@@ -28,6 +28,48 @@ function isManifestJson(data) {
   return Array.isArray(data) && data.length > 0 && data[0]?.url && data[0]?.summary;
 }
 
+function safeJoinCwd(p) {
+  if (!p) return null;
+  return path.isAbsolute(p) ? p : path.join(process.cwd(), p);
+}
+
+function extractFromManifestEntry(entry, device) {
+  // 1) 점수는 manifest summary에서 우선 채우고
+  const perf = entry.summary?.performance;
+  const acc = entry.summary?.accessibility;
+  const bp = entry.summary?.["best-practices"] ?? entry.summary?.bestPractices;
+  const seo = entry.summary?.seo;
+
+  // 2) metrics(LCP/CLS 등)는 report jsonPath를 열어서 audits에서 채움
+  let metrics = {};
+  const reportPath = safeJoinCwd(entry.jsonPath);
+  const reportJson = reportPath ? readJsonSafe(reportPath) : null;
+
+  if (reportJson?.categories) {
+    const extracted = extractOneReport(reportJson);
+    metrics = extracted.metrics || {};
+  } else {
+    // report를 못 열었거나 구조가 다르면 metrics는 비워둠(N/A)
+    metrics = {};
+  }
+
+  return {
+    device,
+    file: entry.jsonPath || "(manifest)",
+    ok: true,
+    url: entry.url,
+    performance: perf,
+    accessibility: acc,
+    bestPractices: bp,
+    seo,
+    metrics,
+  };
+}
+
+function isManifestJson(data) {
+  return Array.isArray(data) && data.length > 0 && data[0]?.url && data[0]?.summary;
+}
+
 function extractFromManifest(manifestArray, device, file) {
   const reps = manifestArray.filter((x) => x.isRepresentativeRun);
   const rows = (reps.length ? reps : manifestArray).map((x) => ({
@@ -107,7 +149,17 @@ function loadReports({ dir, device }) {
     if (!data) continue;
 
     if (isManifestJson(data)) {
-      items.push(...extractFromManifest(data, device, file));
+      const reps = data.filter((x) => x.isRepresentativeRun);
+      const rows = (reps.length ? reps : data).map((entry) => extractFromManifestEntry(entry, device));
+
+      // URL 중복 제거(대표 run 기준이면 보통 없지만 안전하게)
+      const seen = new Set();
+      for (const r of rows) {
+        if (!r.url) continue;
+        if (seen.has(r.url)) continue;
+        seen.add(r.url);
+        items.push(r);
+      }
       continue;
     }
 
