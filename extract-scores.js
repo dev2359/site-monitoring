@@ -45,11 +45,10 @@ function extractFromManifestEntry(entry, device) {
   const reportPath = safeJoinCwd(entry.jsonPath);
   const reportJson = reportPath ? readJsonSafe(reportPath) : null;
 
-  if (reportJson?.categories) {
+  if (reportJson?.categories || reportJson?.lhr?.categories) {
     const extracted = extractOneReport(reportJson);
     metrics = extracted.metrics || {};
   } else {
-    // report를 못 열었거나 구조가 다르면 metrics는 비워둠(N/A)
     metrics = {};
   }
 
@@ -105,35 +104,61 @@ function statusFromPerf(perfScore01) {
   return "OK";
 }
 
+function get(obj, pathArr) {
+  let cur = obj;
+  for (const k of pathArr) {
+    if (!cur || typeof cur !== "object") return undefined;
+    cur = cur[k];
+  }
+  return cur;
+}
+
+function pickNumber(obj, candidates) {
+  for (const pathArr of candidates) {
+    const v = get(obj, pathArr);
+    if (typeof v === "number") return v;
+  }
+  return undefined;
+}
+
 function extractOneReport(reportJson) {
-  const c = reportJson.categories || {};
-  const audits = reportJson.audits || {};
+  // ✅ report가 { lhr: {...} }로 감싸진 케이스 대응
+  const root = reportJson?.lhr?.categories ? reportJson.lhr : reportJson;
+
+  const c = root.categories || {};
+  const audits = root.audits || {};
 
   const performance = c.performance?.score;
   const accessibility = c.accessibility?.score;
   const bestPractices = c["best-practices"]?.score;
   const seo = c.seo?.score;
 
-  const lcp = audits["largest-contentful-paint"]?.numericValue; // ms
-  const cls = audits["cumulative-layout-shift"]?.numericValue;
-  const tbt = audits["total-blocking-time"]?.numericValue; // ms
-  const si = audits["speed-index"]?.numericValue; // ms
+  // ✅ LCP/CLS는 케이스별 위치가 달라서 fallback 포함
+  const lcp = pickNumber(audits, [
+    ["largest-contentful-paint", "numericValue"],                 // 일반 audit
+    ["metrics", "details", "items", 0, "largestContentfulPaint"], // metrics item
+  ]);
+
+  const cls = pickNumber(audits, [
+    ["cumulative-layout-shift", "numericValue"],                  // 일반 audit
+    ["metrics", "details", "items", 0, "cumulativeLayoutShift"],  // metrics item
+  ]);
+
+  const tbt = pickNumber(audits, [
+    ["total-blocking-time", "numericValue"],
+    ["metrics", "details", "items", 0, "totalBlockingTime"],
+  ]);
+
+  const si = pickNumber(audits, [
+    ["speed-index", "numericValue"],
+    ["metrics", "details", "items", 0, "speedIndex"],
+  ]);
 
   return {
-    finalUrl: reportJson.finalUrl || reportJson.requestedUrl || "(unknown)",
-    scores: {
-      performance,
-      accessibility,
-      bestPractices,
-      seo,
-    },
-    metrics: {
-      lcp, // ms
-      cls,
-      tbt, // ms
-      si,  // ms
-    },
-    runtimeError: reportJson.runtimeError || null,
+    finalUrl: root.finalUrl || root.requestedUrl || "(unknown)",
+    scores: { performance, accessibility, bestPractices, seo },
+    metrics: { lcp, cls, tbt, si },
+    runtimeError: root.runtimeError || null,
   };
 }
 
