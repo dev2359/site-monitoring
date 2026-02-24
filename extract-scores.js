@@ -3,8 +3,8 @@ const path = require("path");
 
 // ====== 설정(원하면 env로 뺄 수 있음) ======
 const THRESHOLDS = {
-  warn: 0.8, // 80점 미만이면 WARN
-  crit: 0.7, // 70점 미만이면 CRIT
+  warn: 0.7, // 80점 미만이면 WARN
+  crit: 0.6, // 70점 미만이면 CRIT
 };
 
 const RESULT_DIRS = [
