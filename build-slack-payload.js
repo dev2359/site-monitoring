@@ -226,14 +226,14 @@ function main() {
   // Compose AI blocks
   const aiTldrBlock =
     ai.tldr.length > 0
-      ? `*AI TL;DR*\n${ai.tldr.map((l) => `• ${l.replace(/^[-•]\s*/, "")}`).join("\n")}`
+      ? `*🧠AI TL;DR*\n${ai.tldr.map((l) => `• ${l.replace(/^[-•]\s*/, "")}`).join("\n")}`
       : ai.rawSnippet
       ? `*AI Note*\n\`\`\`\n${ai.rawSnippet}\n\`\`\``
       : null;
 
   const aiActionsBlock =
     ai.actions.length > 0
-      ? `*Recommended actions (Top 3)*\n${ai.actions.map((a) => `• ${a.replace(/^[-•]\s*/, "")}`).join("\n")}`
+      ? `*🎯 Recommended actions*\n${ai.actions.map((a) => `• ${a.replace(/^[-•]\s*/, "")}`).join("\n")}`
       : null;
 
   // Slack blocks
