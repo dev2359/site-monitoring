@@ -2,7 +2,7 @@ name: Lighthouse - Desktop & Mobile
 
 on:
   schedule:
-    - cron: "0 0 * * *" # 매일 자정 UTC
+    - cron: "0 16 * * *" # 매일 한국시간 새벽 1시
   workflow_dispatch:
 
 jobs:
