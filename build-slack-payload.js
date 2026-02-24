@@ -14,8 +14,8 @@ const AI_MD_PATH = path.join("results", "ai-suggestions.md");
 const OUT_PATH = path.join("results", "slack-payload.json");
 
 // ===== Customize =====
-const TOP_N_PER_DEVICE = 5; // mobile/desktop 각각 Top N만 노출
-const DEFAULT_THRESHOLDS = { warn: 0.8, crit: 0.7 }; // Perf 기준
+const TOP_N_PER_DEVICE = 3; // mobile/desktop 각각 Top N만 노출
+const DEFAULT_THRESHOLDS = { warn: 0.7, crit: 0.6 }; // Perf 기준
 // =====================
 
 function readJson(filePath) {
