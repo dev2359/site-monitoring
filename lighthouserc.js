@@ -57,7 +57,7 @@ module.exports = {
     upload: {
       target: 'filesystem',
       outputDir: './results/desktop',
-      reportFilenamePattern: 'report-pc-__url.host__-__index__.__ext__'      
+      reportFilenamePattern: 'report-pc-__url.host__-__index__'      
     }
   }
 };
