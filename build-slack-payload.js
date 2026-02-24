@@ -256,7 +256,7 @@ function main() {
     elements: [
       {
         type: "mrkdwn",
-        text: "전체 URL 점수/표는 GitHub Actions Job Summary에서 확인 (Slack에는 문제 Top만 표시).",
+        text: "전체 URL 점수는 GitHub에서 확인",
       },
     ],
   });
