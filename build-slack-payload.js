@@ -210,10 +210,7 @@ function main() {
 
   // KPI 텍스트: URL이 20개+여도 여기만 보면 전체 상황이 보이게
   const kpiText =
-    `*Checked:* ${items.length} URLs  |  *Problems:* ${problems.length} _(P<${warnCut})_  |  *Critical:* _(P<${critCut})_\n` +
-    `*All:* 🚨 ${cAll.crit}  ⚠️ ${cAll.warn}  ✅ ${cAll.ok}  ℹ️ ${cAll.unknown}\n` +
-    `*Mobile:* 🚨 ${cM.crit}  ⚠️ ${cM.warn}  ✅ ${cM.ok}  ℹ️ ${cM.unknown}   |   ` +
-    `*Desktop:* 🚨 ${cD.crit}  ⚠️ ${cD.warn}  ✅ ${cD.ok}  ℹ️ ${cD.unknown}`;
+    `*All:* 🚨 ${cAll.crit}  ⚠️ ${cAll.warn}  ✅ ${cAll.ok}  ℹ️ ${cAll.unknown}\n`;
 
   // Top N 문제 URL만 노출
   const topMobileLines =
@@ -242,7 +239,6 @@ function main() {
   // Slack blocks
   const blocks = [
     { type: "header", text: { type: "plain_text", text: headerText } },
-    { type: "section", text: { type: "mrkdwn", text: `${worstLine}\n${kpiText}` } },
 
     { type: "section", text: { type: "mrkdwn", text: `*Top Mobile Problems*\n${topMobileLines.join("\n")}` } },
     { type: "section", text: { type: "mrkdwn", text: `*Top Desktop Problems*\n${topDesktopLines.join("\n")}` } },
