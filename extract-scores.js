@@ -184,15 +184,15 @@ function loadReports({ dir, device }) {
       continue;
     }
 
-    if (!data.categories) {
-      items.push({
-        device,
-        file,
-        ok: false,
-        url: data.finalUrl || data.requestedUrl || "(unknown)",
-        runtimeError: data.runtimeError || { message: "Invalid report (no categories)" },
-      });
-      continue;
+    if (!data.categories && !data.lhr?.categories) {
+       items.push({
+         device,
+         file,
+         ok: false,
+         url: data.finalUrl || data.requestedUrl || "(unknown)",
+         runtimeError: data.runtimeError || { message: "Invalid report (no categories)" },
+       });
+       continue;
     }
 
     const extracted = extractOneReport(data);
