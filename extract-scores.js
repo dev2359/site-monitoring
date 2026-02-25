@@ -65,10 +65,6 @@ function extractFromManifestEntry(entry, device) {
   };
 }
 
-function isManifestJson(data) {
-  return Array.isArray(data) && data.length > 0 && data[0]?.url && data[0]?.summary;
-}
-
 function extractFromManifest(manifestArray, device, file) {
   const reps = manifestArray.filter((x) => x.isRepresentativeRun);
   const rows = (reps.length ? reps : manifestArray).map((x) => ({
