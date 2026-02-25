@@ -5,6 +5,10 @@ on:
     - cron: "0 16 * * 0,3" # 한국시간(KST) 새벽 1시
   workflow_dispatch:
 
+concurrency:
+  group: lighthouse-monitoring
+  cancel-in-progress: true
+  
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
