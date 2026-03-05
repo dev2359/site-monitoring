@@ -79,7 +79,16 @@ jobs:
       - name: Decide Slack notify
         id: decide
         run: |
-          node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('results/summary.json','utf8')); const status=(s?.overall?.status)||'UNKNOWN'; const should = (status!=='OK'); console.log('status='+status); console.log('should_notify='+(should?'true':'false')); fs.appendFileSync(process.env.GITHUB_OUTPUT, `status=${status}\nshould_notify=${should?'true':'false'}\n`);"
+          STATUS=$(node -e "const s=require('./results/summary.json'); console.log((s?.overall?.status)||'UNKNOWN')")
+          echo "status=$STATUS"
+          
+          if [ "$STATUS" != "OK" ]; then
+            echo "should_notify=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_notify=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
 
       - name: Send Slack message (webhook)
         if: steps.decide.outputs.should_notify == 'true'
