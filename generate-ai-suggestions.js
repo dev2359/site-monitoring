@@ -111,7 +111,6 @@ async function callOpenAI(prompt) {
       return data.output_text.trim();
     }
 
-    // Fallback: collect output_text chunks
     const chunks = [];
     for (const item of data.output || []) {
       for (const c of item.content || []) {
