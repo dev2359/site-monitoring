@@ -161,7 +161,7 @@ function buildProblemLines(problems, warn01, crit01, limit) {
 
     // ✅ Slack 한 줄 가독성: 아이콘 + [M/D] + 4종 점수 + URL
     return `• [${deviceTag(p.device)}] ${p.url}
-P${perf} | A${a11y} | BP${bp} | SEO${seo} | LCP ${lcp} | CLS ${cls}`;
+  \`${`P ${perf} | A ${a11y} | BP ${bp} | SEO ${seo} | LCP ${lcp} | CLS ${cls}`}\``;
   });
 }
 
