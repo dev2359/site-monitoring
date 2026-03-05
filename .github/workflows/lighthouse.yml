@@ -181,6 +181,8 @@ jobs:
 
       - name: Build Slack payload
         run: node build-slack-payload.js
+        env:
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Decide Slack notify
         id: decide
