@@ -161,13 +161,13 @@ function buildStats(rows) {
   };
 }
 
-function topMovers(rows, keyDelta, n, direction /* "up" | "down" */) {
+function topMovers(rows, keyDelta, n, direction) {
   const scored = rows
     .map((r) => ({ r, d: toNum(r[keyDelta]) }))
     .filter((x) => typeof x.d === "number");
 
-  scored.sort((a, b) => a.d - b.d); // ascending
-  if (direction === "up") scored.reverse(); // descending
+  scored.sort((a, b) => a.d - b.d);
+  if (direction === "up") scored.reverse();
 
   return scored.slice(0, n).map((x) => x.r);
 }
@@ -297,7 +297,6 @@ async function callOpenAI(prompt) {
 }
 
 async function main() {
-  // ✅ Always create md so workflow doesn't fail downstream
   if (!fs.existsSync(CSV_PATH)) {
     writeMd(`## 3-Month AI Insights\n\n_(No comparison CSV found at \`${CSV_PATH}\`. Run build-3m-table.js first.)_\n`);
     console.log("No CSV. Wrote placeholder md.");
@@ -381,7 +380,6 @@ async function main() {
     },
   };
 
-  // no key → fallback
   if (!OPENAI_API_KEY) {
     writeMd(buildFallbackMd(rows, statsAll, statsByDevice));
     console.log("No OPENAI_API_KEY. Wrote fallback md.");
