@@ -124,13 +124,31 @@ jobs:
           git commit -m "chore: lighthouse snapshot $DATE" || echo "No changes"
           git push
 
-      # ✅ 여기서부터: 3개월 비교표는 Slack에 넣지 않고, GitHub Job Summary에서만 확인
+      # ✅ 여기서부터: 3개월 비교표/분석은 Slack에 넣지 않고, GitHub Job Summary에서만 확인
       - name: Build 3-month comparison table (all URLs)
         run: node build-3m-table.js
 
       - name: Publish comparison table to Job Summary
         run: |
           cat results/compare-3m-all.md >> $GITHUB_STEP_SUMMARY
+
+      # ✅ 3개월 비교 데이터 기반 AI 코멘트 생성/게시 (GitHub Summary 전용)
+      - name: Generate 3M AI analysis
+        run: node generate-3m-ai-analysis.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1-mini
+          OPENAI_MAX_OUTPUT_TOKENS: "500"
+
+      - name: Publish 3M AI analysis to Job Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 3-Month AI Insights" >> $GITHUB_STEP_SUMMARY
+          if [ -f results/compare-3m-ai.md ]; then
+            cat results/compare-3m-ai.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "_(No 3-month AI analysis yet. File not generated.)_" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload 3-month comparison table files
         uses: actions/upload-artifact@v4
@@ -139,6 +157,7 @@ jobs:
           path: |
             results/compare-3m-all.md
             results/compare-3m-all.csv
+            results/compare-3m-ai.md
           if-no-files-found: warn
 
       # 기존 Slack 알림 흐름은 그대로 유지
