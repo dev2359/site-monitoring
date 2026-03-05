@@ -13,10 +13,8 @@ const SUMMARY_PATH = path.join("results", "summary.json");
 const AI_MD_PATH = path.join("results", "ai-suggestions.md");
 const OUT_PATH = path.join("results", "slack-payload.json");
 
-// ===== Customize =====
-const TOP_N_PER_DEVICE = 3; // mobile/desktop 각각 Top N만 노출
+const TOP_N_PER_DEVICE = 3; // 출력 개수
 const DEFAULT_THRESHOLDS = { warn: 0.7, crit: 0.6 }; // Perf 기준
-// =====================
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -60,7 +58,6 @@ function lineEmojiFromPerf(score01, warn01, crit01) {
 }
 
 function score4(p) {
-  // 2자리로 압축 표시: P:07 같은 형태 (N/A는 그대로)
   const P = toPct(p.performance);
   const A = toPct(p.accessibility);
   const BP = toPct(p.bestPractices);
@@ -142,7 +139,6 @@ function parseAiMarkdown(md) {
 }
 
 function buildProblemLines(problems, warn01, crit01, limit) {
-  // perf 낮은 순으로 정렬해서 Top N만
   const sorted = problems
     .slice()
     .sort((a, b) => (a.performance ?? 1) - (b.performance ?? 1))
@@ -189,7 +185,6 @@ function main() {
   const problems = Array.isArray(summary.problems) ? summary.problems : [];
   const worst = summary?.overall?.worst || null;
 
-  // 전체 상태는 summary.overall.status를 우선 사용, 없으면 worst/perf로 계산
   const derivedStatus =
     summary?.overall?.status && summary.overall.status !== "UNKNOWN"
       ? summary.overall.status
@@ -198,13 +193,11 @@ function main() {
   const headerEmoji = statusEmoji(derivedStatus);
   const headerText = `${headerEmoji} Daily Lighthouse (${date}) - ${derivedStatus}`;
 
-  // 디바이스별 분리
   const itemsMobile = items.filter((p) => p.device === "mobile");
   const itemsDesktop = items.filter((p) => p.device === "desktop");
   const problemsMobile = problems.filter((p) => p.device === "mobile");
   const problemsDesktop = problems.filter((p) => p.device === "desktop");
 
-  // 카운트 요약
   const cAll = countByStatus(items, warn01, crit01);
   const cM = countByStatus(itemsMobile, warn01, crit01);
   const cD = countByStatus(itemsDesktop, warn01, crit01);
@@ -216,11 +209,9 @@ function main() {
     ? `*Worst:* *[${deviceTag(worst.device)}]* P:${toPct(worst.performance)} | ${worst.url}`
     : `*Worst:* N/A _(valid: ${validReports}, invalid: ${invalidReports})_`;
 
-  // KPI 텍스트: URL이 20개+여도 여기만 보면 전체 상황이 보이게
   const kpiText =
     `*All:* 🚨 ${cAll.crit}  ⚠️ ${cAll.warn}  ✅ ${cAll.ok}  ℹ️ ${cAll.unknown}\n`;
 
-  // Top N 문제 URL만 노출
   const topMobileLines =
     problemsMobile.length > 0
       ? buildProblemLines(problemsMobile, warn01, crit01, TOP_N_PER_DEVICE)
@@ -231,7 +222,6 @@ function main() {
       ? buildProblemLines(problemsDesktop, warn01, crit01, TOP_N_PER_DEVICE)
       : ["✅ (No desktop problems)"];
 
-  // Compose AI blocks
   const aiTldrBlock =
     ai.tldr.length > 0
       ? `*🧠 AI TL;DR*\n${ai.tldr.map((l) => `• ${l.replace(/^[-•]\s*/, "")}`).join("\n")}`
@@ -274,7 +264,6 @@ function main() {
     blocks,
   };
 
-  // Ensure output dir exists
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf-8");
 
