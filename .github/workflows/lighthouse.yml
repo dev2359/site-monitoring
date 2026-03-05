@@ -107,9 +107,7 @@ jobs:
 
       - name: Extract scores + build summary
         run: node extract-scores.js
-
-      # ✅ history 저장 + 커밋/푸시를 하나의 스텝으로 (rebase 에러 방지)
-      # ✅ 하루 N회 재실행 대비: 파일명에 시간까지 포함 (UTC 기준)
+        
       - name: Save + Commit history snapshot
         run: |
           TS=$(date -u +'%Y-%m-%d-%H%M%S')
@@ -118,7 +116,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          # rebase는 워킹트리가 깨끗할 때만 가능하므로, "파일 만들기 전에" 먼저 수행
           git pull --rebase
 
           cp results/summary.json history/$TS.json
@@ -127,7 +124,6 @@ jobs:
           git commit -m "chore: lighthouse snapshot $TS" || echo "No changes"
           git push
 
-      # ✅ 여기서부터: 3개월 비교표/분석은 Slack에 넣지 않고, GitHub Job Summary에서만 확인
       - name: Build 3-month comparison table (all URLs)
         run: node build-3m-table.js
 
@@ -135,7 +131,6 @@ jobs:
         run: |
           cat results/compare-3m-all.md >> $GITHUB_STEP_SUMMARY
 
-      # ✅ 3개월 비교 데이터 기반 AI 코멘트 생성/게시 (GitHub Summary 전용)
       - name: Generate 3M AI analysis
         run: node generate-3m-ai-analysis.js
         env:
@@ -163,7 +158,6 @@ jobs:
             results/compare-3m-ai.md
           if-no-files-found: warn
 
-      # 기존 Slack 알림 흐름은 그대로 유지
       - name: Build AI input (optional)
         run: |
           if [ -f generate-ai-input.js ]; then
