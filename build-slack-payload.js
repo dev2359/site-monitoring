@@ -149,14 +149,19 @@ function buildProblemLines(problems, warn01, crit01, limit) {
     .slice(0, limit);
 
   return sorted.map((p) => {
-    const m = p.metrics || {};
+    const perf = toPct(p.performance);
+    const a11y = toPct(p.accessibility);
+    const bp = toPct(p.bestPractices);
+    const seo = toPct(p.seo);
+    
+    const m = p.metrics || {};    
     const lcp = m.lcp ? `${Math.round(m.lcp)}ms` : "N/A";
     const cls = typeof m.cls === "number" ? safeFixed(m.cls, 3) : "N/A";
     const icon = lineEmojiFromPerf(p.performance, warn01, crit01);
 
     // ✅ Slack 한 줄 가독성: 아이콘 + [M/D] + 4종 점수 + URL
-    return `• [${p.device}] ${p.url}
-  P${perf} | A${a11y} | BP${bp} | SEO${seo} | LCP ${lcp} | CLS ${cls}`
+    return `• [${deviceTag(p.device)}] ${p.url}
+P${perf} | A${a11y} | BP${bp} | SEO${seo} | LCP ${lcp} | CLS ${cls}`;
   });
 }
 
