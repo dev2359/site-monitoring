@@ -241,8 +241,8 @@ function main() {
   const blocks = [
     { type: "header", text: { type: "plain_text", text: headerText } },
 
-    { type: "section", text: { type: "mrkdwn", text: `*Top Mobile Problems*\n${topMobileLines.join("\n")}` } },
-    { type: "section", text: { type: "mrkdwn", text: `*Top Desktop Problems*\n${topDesktopLines.join("\n")}` } },
+    { type: "section", text: { type: "mrkdwn", text: `*📱 Top Mobile Problems*\n${topMobileLines.join("\n")}` } },
+    { type: "section", text: { type: "mrkdwn", text: `*🖥️ Top Desktop Problems*\n${topDesktopLines.join("\n")}` } },
   ];
 
   if (aiTldrBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
