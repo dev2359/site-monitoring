@@ -2,17 +2,16 @@ name: Lighthouse - Desktop & Mobile
 
 on:
   schedule:
-    - cron: "0 16 * * 0,3" # 한국시간(KST) 새벽 1시
+    - cron: "0 16 * * 0,3" # KST 월/목 01:00 (UTC 일/수 16:00)
   workflow_dispatch:
 
 concurrency:
   group: lighthouse-monitoring
   cancel-in-progress: true
-  
-jobs:
-  lighthouse:
-    runs-on: ubuntu-latest
 
+jobs:
+  lighthouse_desktop:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,7 +24,53 @@ jobs:
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
 
-      # (선택) 레포에 package.json이 있고 스크립트가 의존성을 쓰면 npm ci 추천
+      - name: Run Lighthouse (Desktop)
+        run: lhci autorun --config=lighthouserc.js
+
+      - name: Upload Desktop Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-desktop-results
+          path: results/desktop/*.*
+          if-no-files-found: warn
+
+  lighthouse_mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse (Mobile)
+        run: lhci autorun --config=lighthouserc_mobile.js
+
+      - name: Upload Mobile Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-mobile-results
+          path: results/mobile/*.*
+          if-no-files-found: warn
+
+  summarize_and_notify:
+    runs-on: ubuntu-latest
+    needs: [lighthouse_desktop, lighthouse_mobile]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
       - name: Install Node dependencies (if any)
         run: |
           if [ -f package-lock.json ]; then
@@ -36,27 +81,28 @@ jobs:
             echo "No package.json. Skipping npm install."
           fi
 
-      - name: Run Lighthouse (Desktop)
-        run: lhci autorun --config=lighthouserc.js
+      - name: Download Desktop Results
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-desktop-results
+          path: results/desktop
 
-      - name: Run Lighthouse (Mobile)
-        run: lhci autorun --config=lighthouserc_mobile.js
+      - name: Download Mobile Results
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-mobile-results
+          path: results/mobile
 
       - name: List result files (pre-parse)
         run: |
           echo "=== results/desktop ==="
-          ls -al results/desktop || echo "❌ desktop 폴더 없음"
+          ls -al results/desktop || true
           echo "=== results/mobile ==="
-          ls -al results/mobile || echo "❌ mobile 폴더 없음"
-
-      # ✅ 중요: 여기서부터 “파싱/요약/Slack payload 생성”을 먼저 끝낸다.
-      #         (manifest jsonPath가 리포트 파일명을 참조하므로, mv로 파일명 바꾸면 LCP/CLS 못 찾음)
+          ls -al results/mobile || true
 
       - name: Extract scores + build summary
         run: node extract-scores.js
 
-      # ai-input.json을 별도 파일로 만드는 구조라면 이 스텝을 사용
-      # (이미 extract-scores.js가 ai-input.json까지 만든다면 이 스텝은 제거해도 됨)
       - name: Build AI input (optional)
         run: |
           if [ -f generate-ai-input.js ]; then
@@ -75,63 +121,26 @@ jobs:
       - name: Build Slack payload
         run: node build-slack-payload.js
 
-      # Slack 발송 여부 판단: summary.overall.status가 OK면 스킵
       - name: Decide Slack notify
         id: decide
         run: |
           STATUS=$(node -e "const s=require('./results/summary.json'); console.log((s?.overall?.status)||'UNKNOWN')")
           echo "status=$STATUS"
-          
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
           if [ "$STATUS" != "OK" ]; then
             echo "should_notify=true" >> $GITHUB_OUTPUT
           else
             echo "should_notify=false" >> $GITHUB_OUTPUT
           fi
-          
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
 
       - name: Send Slack message (webhook)
         if: steps.decide.outputs.should_notify == 'true'
         run: |
-          echo "Sending Slack message. status=${{ steps.decide.outputs.status }}"
+          echo "Sending Slack message (status=${{ steps.decide.outputs.status }})"
           curl -X POST -H 'Content-type: application/json' \
             --data @results/slack-payload.json \
             "${{ secrets.SLACK_WEBHOOK_URL }}"
 
-      # ✅ 중요: “파일명에 날짜 붙이기”는 Slack payload 생성 이후에 수행
-      - name: Append date to desktop reports
-        run: |
-          DATE=$(date +'%Y%m%d')
-          if [ -d results/desktop ]; then
-            for f in results/desktop/*.*; do
-              [ -e "$f" ] || continue
-              mv "$f" "${f%.*}-$DATE.${f##*.}"
-            done
-          fi
-
-      - name: Append date to mobile reports
-        run: |
-          DATE=$(date +'%Y%m%d')
-          if [ -d results/mobile ]; then
-            for f in results/mobile/*.*; do
-              [ -e "$f" ] || continue
-              mv "$f" "${f%.*}-$DATE.${f##*.}"
-            done
-          fi
-
-      - name: Upload Reports (Desktop)
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-desktop-reports
-          path: results/desktop/*.*
-
-      - name: Upload Reports (Mobile)
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-mobile-reports
-          path: results/mobile/*.*
-
-      # (추천) 요약/AI/Slack payload도 같이 업로드하면 디버깅 매우 편함
       - name: Upload Summary + AI + Slack payload
         uses: actions/upload-artifact@v4
         with:
@@ -141,3 +150,4 @@ jobs:
             results/ai-input.json
             results/ai-suggestions.md
             results/slack-payload.json
+          if-no-files-found: warn
