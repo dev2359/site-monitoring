@@ -255,16 +255,20 @@ function main() {
   if (aiTldrBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
   if (aiActionsBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiActionsBlock } });
 
+  const runUrl = process.env.GITHUB_RUN_URL;
+  
   blocks.push({
     type: "context",
     elements: [
       {
         type: "mrkdwn",
-        text: "전체 URL 점수는 GitHub에서 확인",
+        text: runUrl
+          ? `<${runUrl}|📊 전체 URL 점수(표) 보러가기>`
+          : "📊 전체 URL 점수(표) 보러가기",
       },
     ],
   });
-
+  
   const payload = {
     text: `${headerText}\n${worstLine}\nProblems(P<${warnCut}): ${problems.length}`,
     blocks,
