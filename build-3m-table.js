@@ -22,7 +22,6 @@ const NOW_PATH = path.join("results", "summary.json");
 const OUT_MD = path.join("results", "compare-3m-all.md");
 const OUT_CSV = path.join("results", "compare-3m-all.csv");
 
-// 3개월 근사: 90일
 const PAST_DAYS = 90;
 
 function exists(p) {
@@ -33,9 +32,6 @@ function readJson(p) {
 }
 
 function parseHistoryFilename(fileName) {
-  // Accept:
-  //  - 2026-03-05.json
-  //  - 2026-03-05-013045.json
   const m = fileName.match(/^(\d{4})-(\d{2})-(\d{2})(?:-(\d{2})(\d{2})(\d{2}))?\.json$/);
   if (!m) return null;
 
@@ -43,16 +39,12 @@ function parseHistoryFilename(fileName) {
   const mm = Number(m[2]);
   const dd = Number(m[3]);
 
-  // if time missing, treat as 00:00:00
   const HH = m[4] ? Number(m[4]) : 0;
   const MM = m[5] ? Number(m[5]) : 0;
   const SS = m[6] ? Number(m[6]) : 0;
 
-  // UTC 기준
   const date = new Date(Date.UTC(yyyy, mm - 1, dd, HH, MM, SS));
-  const dayKey = `${m[1]}-${m[2]}-${m[3]}`; // YYYY-MM-DD
-
-  // For comparing "latest in the same day"
+  const dayKey = `${m[1]}-${m[2]}-${m[3]}`; 
   const timeKey = `${String(HH).padStart(2, "0")}${String(MM).padStart(2, "0")}${String(SS).padStart(2, "0")}`; // HHMMSS
 
   return {
@@ -69,7 +61,6 @@ function listHistoryLatestPerDay() {
 
   const files = fs.readdirSync(HISTORY_DIR).filter((f) => f.endsWith(".json"));
 
-  // dayKey -> bestEntry(latest time)
   const bestByDay = new Map();
 
   for (const f of files) {
@@ -82,10 +73,6 @@ function listHistoryLatestPerDay() {
       continue;
     }
 
-    // Compare which is "later"
-    // Priority:
-    // 1) later datetime (safe)
-    // 2) if same datetime (unlikely), lexical fileName
     if (e.date.getTime() > prev.date.getTime()) {
       bestByDay.set(e.dayKey, e);
     } else if (e.date.getTime() === prev.date.getTime() && e.fileName > prev.fileName) {
@@ -94,7 +81,7 @@ function listHistoryLatestPerDay() {
   }
 
   const entries = [...bestByDay.values()];
-  entries.sort((a, b) => a.date.getTime() - b.date.getTime()); // ascending
+  entries.sort((a, b) => a.date.getTime() - b.date.getTime());
   return entries;
 }
 
@@ -132,10 +119,6 @@ function csvEscape(v) {
   return t;
 }
 
-/**
- * summary.json의 items 구조를 관대하게 normalize
- * key: `${device}||${url}` 로 now/past 매칭
- */
 function normalizeItems(summary) {
   const items = Array.isArray(summary.items) ? summary.items : [];
   return items
@@ -176,7 +159,6 @@ function main() {
   const nowRows = normalizeItems(nowSummary);
   const nowIdx = indexByKey(nowRows);
 
-  // ✅ same-day multiple snapshots → keep only the latest per day
   const entries = listHistoryLatestPerDay();
 
   const nowDate = new Date();
@@ -196,14 +178,13 @@ function main() {
         const pastRows = normalizeItems(pastSummary);
         pastIdx = indexByKey(pastRows);
         hasPast = pastRows.length > 0;
-        pastLabel = pastEntry.isoKey; // includes time if exists
+        pastLabel = pastEntry.isoKey;
       } catch (e) {
         console.error("⚠️ Failed to read past snapshot:", pastEntry.fileName, e?.message || e);
       }
     }
   }
 
-  // 현재+과거 union (과거에만 있던 URL도 포함)
   const allKeys = new Set([...nowIdx.keys(), ...pastIdx.keys()]);
 
   const rows = [];
@@ -241,7 +222,6 @@ function main() {
     });
   }
 
-  // 정렬: 현재 Perf 낮은 순 → Perf delta(악화) 큰 순
   rows.sort((a, b) => {
     const aNow = a.perf_now ?? 999;
     const bNow = b.perf_now ?? 999;
@@ -249,12 +229,11 @@ function main() {
 
     const aD = a.perf_delta ?? 0;
     const bD = b.perf_delta ?? 0;
-    return aD - bD; // -값(악화) 먼저
+    return aD - bD;
   });
 
-  // Markdown
   const header =
-    `# 3-Month Comparison (All URLs)\n\n` +
+    `# 3 Month Comparison (All URLs)\n\n` +
     `- Now: ${nowDate.toISOString().slice(0, 10)}\n` +
     `- Past (nearest to ~${PAST_DAYS}d ago, latest-per-day): ${hasPast ? pastLabel : "(not enough history yet)"}\n` +
     `- Rows: ${rows.length}\n` +
