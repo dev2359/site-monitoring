@@ -15,7 +15,6 @@ const OUT_PATH = path.join("results", "ai-suggestions.md");
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// 가성비 우선: 경량 모델
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const MAX_OUTPUT_TOKENS = Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 650);
 
@@ -154,8 +153,6 @@ function fallbackMarkdown(err) {
 async function main() {
   const input = mustReadJson(IN_PATH);
 
-  // 비용 최소화: problems 중심으로 “슬림 입력” 만들기
-  // (ai-input.json이 이미 슬림하면 이 단계가 큰 영향은 없지만, 안전장치로 둠)
   const slim = {
     generatedAt: input.generatedAt,
     thresholds: input.thresholds,
@@ -174,7 +171,6 @@ async function main() {
   } catch (err) {
     console.error("❌ OpenAI failed:", err);
     writeText(OUT_PATH, fallbackMarkdown(err));
-    // 실패해도 전체 파이프라인은 진행(원하면 1로 바꿔서 실패 시 중단)
     process.exit(0);
   }
 }
