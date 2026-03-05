@@ -108,20 +108,23 @@ jobs:
       - name: Extract scores + build summary
         run: node extract-scores.js
 
-      - name: Save history snapshot
+      # ✅ history 저장 + 커밋/푸시를 하나의 스텝으로 (rebase 에러 방지)
+      # ✅ 하루 N회 재실행 대비: 파일명에 시간까지 포함 (UTC 기준)
+      - name: Save + Commit history snapshot
         run: |
+          TS=$(date -u +'%Y-%m-%d-%H%M%S')
           mkdir -p history
-          DATE=$(date +'%Y-%m-%d')
-          cp results/summary.json history/$DATE.json
 
-      - name: Commit history snapshot
-        run: |
-          DATE=$(date +'%Y-%m-%d')
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+
+          # rebase는 워킹트리가 깨끗할 때만 가능하므로, "파일 만들기 전에" 먼저 수행
           git pull --rebase
-          git add history/$DATE.json
-          git commit -m "chore: lighthouse snapshot $DATE" || echo "No changes"
+
+          cp results/summary.json history/$TS.json
+
+          git add history/$TS.json
+          git commit -m "chore: lighthouse snapshot $TS" || echo "No changes"
           git push
 
       # ✅ 여기서부터: 3개월 비교표/분석은 Slack에 넣지 않고, GitHub Job Summary에서만 확인
