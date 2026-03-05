@@ -155,7 +155,8 @@ function buildProblemLines(problems, warn01, crit01, limit) {
     const icon = lineEmojiFromPerf(p.performance, warn01, crit01);
 
     // ✅ Slack 한 줄 가독성: 아이콘 + [M/D] + 4종 점수 + URL
-    return `${icon} *[${deviceTag(p.device)}]* ${score4(p)} | ${p.url} _(LCP ${lcp}, CLS ${cls})_`;
+    return `• [${p.device}] ${p.url}
+  P${perf} | A${a11y} | BP${bp} | SEO${seo} | LCP ${lcp} | CLS ${cls}`
   });
 }
 
