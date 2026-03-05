@@ -1,8 +1,15 @@
 /**
  * build-3m-table.js
  * - Build a full URL comparison table (Now vs ~3 months ago) for GitHub Job Summary.
- * - input: results/summary.json, history/YYYY-MM-DD.json
+ * - input: results/summary.json, history/*.json
  * - output: results/compare-3m-all.md, results/compare-3m-all.csv
+ *
+ * Supports history filenames:
+ *  - YYYY-MM-DD.json
+ *  - YYYY-MM-DD-HHMMSS.json (UTC recommended)
+ *
+ * Enhancement:
+ *  - If multiple snapshots exist on the same date (YYYY-MM-DD), only the latest one is used.
  *
  * Node 18+, no deps.
  */
@@ -15,31 +22,89 @@ const NOW_PATH = path.join("results", "summary.json");
 const OUT_MD = path.join("results", "compare-3m-all.md");
 const OUT_CSV = path.join("results", "compare-3m-all.csv");
 
+// 3개월 근사: 90일
+const PAST_DAYS = 90;
+
 function exists(p) {
   return fs.existsSync(p);
 }
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, "utf-8"));
 }
-function listHistoryFiles() {
+
+function parseHistoryFilename(fileName) {
+  // Accept:
+  //  - 2026-03-05.json
+  //  - 2026-03-05-013045.json
+  const m = fileName.match(/^(\d{4})-(\d{2})-(\d{2})(?:-(\d{2})(\d{2})(\d{2}))?\.json$/);
+  if (!m) return null;
+
+  const yyyy = Number(m[1]);
+  const mm = Number(m[2]);
+  const dd = Number(m[3]);
+
+  // if time missing, treat as 00:00:00
+  const HH = m[4] ? Number(m[4]) : 0;
+  const MM = m[5] ? Number(m[5]) : 0;
+  const SS = m[6] ? Number(m[6]) : 0;
+
+  // UTC 기준
+  const date = new Date(Date.UTC(yyyy, mm - 1, dd, HH, MM, SS));
+  const dayKey = `${m[1]}-${m[2]}-${m[3]}`; // YYYY-MM-DD
+
+  // For comparing "latest in the same day"
+  const timeKey = `${String(HH).padStart(2, "0")}${String(MM).padStart(2, "0")}${String(SS).padStart(2, "0")}`; // HHMMSS
+
+  return {
+    fileName,
+    isoKey: fileName.replace(/\.json$/, ""),
+    date,
+    dayKey,
+    timeKey,
+  };
+}
+
+function listHistoryLatestPerDay() {
   if (!exists(HISTORY_DIR)) return [];
-  return fs
-    .readdirSync(HISTORY_DIR)
-    .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-    .sort();
+
+  const files = fs.readdirSync(HISTORY_DIR).filter((f) => f.endsWith(".json"));
+
+  // dayKey -> bestEntry(latest time)
+  const bestByDay = new Map();
+
+  for (const f of files) {
+    const e = parseHistoryFilename(f);
+    if (!e) continue;
+
+    const prev = bestByDay.get(e.dayKey);
+    if (!prev) {
+      bestByDay.set(e.dayKey, e);
+      continue;
+    }
+
+    // Compare which is "later"
+    // Priority:
+    // 1) later datetime (safe)
+    // 2) if same datetime (unlikely), lexical fileName
+    if (e.date.getTime() > prev.date.getTime()) {
+      bestByDay.set(e.dayKey, e);
+    } else if (e.date.getTime() === prev.date.getTime() && e.fileName > prev.fileName) {
+      bestByDay.set(e.dayKey, e);
+    }
+  }
+
+  const entries = [...bestByDay.values()];
+  entries.sort((a, b) => a.date.getTime() - b.date.getTime()); // ascending
+  return entries;
 }
-function toDate(yyyy_mm_dd) {
-  return new Date(`${yyyy_mm_dd}T00:00:00Z`);
-}
-function pickNearestDate(targetDate, files) {
+
+function pickNearestEntry(targetDate, entries) {
   let best = null;
   let bestDiff = Infinity;
-  for (const f of files) {
-    const dStr = f.replace(".json", "");
-    const d = toDate(dStr);
-    const diff = Math.abs(d.getTime() - targetDate.getTime());
+  for (const e of entries) {
+    const diff = Math.abs(e.date.getTime() - targetDate.getTime());
     if (diff < bestDiff) {
-      best = dStr;
+      best = e;
       bestDiff = diff;
     }
   }
@@ -68,7 +133,7 @@ function csvEscape(v) {
 }
 
 /**
- * summary.json의 items 구조를 최대한 관대하게 normalize
+ * summary.json의 items 구조를 관대하게 normalize
  * key: `${device}||${url}` 로 now/past 매칭
  */
 function normalizeItems(summary) {
@@ -108,24 +173,34 @@ function main() {
   }
 
   const nowSummary = readJson(NOW_PATH);
-  const files = listHistoryFiles();
-
-  // 운영 목적: 3개월 전을 90일로 근사 (스케줄이 주 2회여도 안정적으로 매칭됨)
-  const nowDate = new Date();
-  const target = new Date(nowDate.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const pastDate = pickNearestDate(target, files);
-
   const nowRows = normalizeItems(nowSummary);
   const nowIdx = indexByKey(nowRows);
 
+  // ✅ same-day multiple snapshots → keep only the latest per day
+  const entries = listHistoryLatestPerDay();
+
+  const nowDate = new Date();
+  const target = new Date(nowDate.getTime() - PAST_DAYS * 24 * 60 * 60 * 1000);
+
+  const pastEntry = pickNearestEntry(target, entries);
+
   let pastIdx = new Map();
   let hasPast = false;
+  let pastLabel = "(not enough history yet)";
 
-  if (pastDate && exists(path.join(HISTORY_DIR, `${pastDate}.json`))) {
-    hasPast = true;
-    const pastSummary = readJson(path.join(HISTORY_DIR, `${pastDate}.json`));
-    const pastRows = normalizeItems(pastSummary);
-    pastIdx = indexByKey(pastRows);
+  if (pastEntry) {
+    const pastPath = path.join(HISTORY_DIR, pastEntry.fileName);
+    if (exists(pastPath)) {
+      try {
+        const pastSummary = readJson(pastPath);
+        const pastRows = normalizeItems(pastSummary);
+        pastIdx = indexByKey(pastRows);
+        hasPast = pastRows.length > 0;
+        pastLabel = pastEntry.isoKey; // includes time if exists
+      } catch (e) {
+        console.error("⚠️ Failed to read past snapshot:", pastEntry.fileName, e?.message || e);
+      }
+    }
   }
 
   // 현재+과거 union (과거에만 있던 URL도 포함)
@@ -177,11 +252,11 @@ function main() {
     return aD - bD; // -값(악화) 먼저
   });
 
-  // Markdown (Job Summary에서는 너무 길어질 수 있어 <details>로 접기)
+  // Markdown
   const header =
     `# 3-Month Comparison (All URLs)\n\n` +
     `- Now: ${nowDate.toISOString().slice(0, 10)}\n` +
-    `- Past: ${hasPast ? pastDate : "(not enough history yet)"}\n` +
+    `- Past (nearest to ~${PAST_DAYS}d ago, latest-per-day): ${hasPast ? pastLabel : "(not enough history yet)"}\n` +
     `- Rows: ${rows.length}\n` +
     `- Columns: Perf/A11y/BP/SEO/LCP/CLS (Past→Now, Δ)\n\n`;
 
@@ -216,7 +291,7 @@ function main() {
   fs.mkdirSync(path.dirname(OUT_MD), { recursive: true });
   fs.writeFileSync(OUT_MD, md, "utf-8");
 
-  // CSV (엑셀/스프레드시트에서 필터/정렬용)
+  // CSV
   const csvHeader = [
     "device",
     "url",
@@ -279,6 +354,8 @@ function main() {
 
   console.log(`✅ Wrote: ${OUT_MD}`);
   console.log(`✅ Wrote: ${OUT_CSV}`);
+  console.log(`ℹ️ Past snapshot used: ${hasPast ? pastLabel : "none"}`);
+  console.log(`ℹ️ History candidates (latest per day): ${entries.length}`);
 }
 
 main();
