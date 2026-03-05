@@ -158,10 +158,12 @@ function buildProblemLines(problems, warn01, crit01, limit) {
     const lcp = m.lcp ? `${Math.round(m.lcp)}ms` : "N/A";
     const cls = typeof m.cls === "number" ? safeFixed(m.cls, 3) : "N/A";
     const icon = lineEmojiFromPerf(p.performance, warn01, crit01);
-
-    // ✅ Slack 한 줄 가독성: 아이콘 + [M/D] + 4종 점수 + URL
-    return `• [${deviceTag(p.device)}] ${p.url}
-  \`${`P ${perf} | A ${a11y} | BP ${bp} | SEO ${seo} | LCP ${lcp} | CLS ${cls}`}\``;
+    
+    const u = new URL(p.url);
+    const short = `${u.host}${u.pathname}${u.search ? "…" : ""}`;
+    
+    return `• [${deviceTag(p.device)}] <${p.url}|${short}>
+    \`P${perf} | A${a11y} | BP${bp} | SEO${seo} | LCP ${lcp} | CLS ${cls}\``;
   });
 }
 
