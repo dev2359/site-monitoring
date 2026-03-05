@@ -77,20 +77,24 @@ function normalizeItems(summary) {
     .map((x) => {
       const device = x.device || x.formFactor || "";
       const url = x.url || x.finalUrl || x.requestedUrl || "";
+
       return {
         key: `${device}||${url}`,
         device,
         url,
+
         perf: pct(x.performance),
         a11y: pct(x.accessibility),
         bp: pct(x.bestPractices ?? x["best-practices"]),
         seo: pct(x.seo),
+
         lcpMs: typeof x.metrics?.lcp === "number" ? x.metrics.lcp : null,
         cls: typeof x.metrics?.cls === "number" ? x.metrics.cls : null,
       };
     })
     .filter((r) => r.url);
 }
+
 function indexByKey(rows) {
   const m = new Map();
   for (const r of rows) m.set(r.key, r);
@@ -131,20 +135,14 @@ function main() {
   for (const key of allKeys) {
     const n = nowIdx.get(key) || {};
     const p = pastIdx.get(key) || {};
+
     rows.push({
       device: n.device || p.device || "",
       url: n.url || p.url || "",
+
       perf_past: p.perf,
       perf_now: n.perf,
       perf_delta: delta(n.perf, p.perf),
-
-      lcp_past_ms: p.lcpMs,
-      lcp_now_ms: n.lcpMs,
-      lcp_delta_ms: delta(n.lcpMs, p.lcpMs),
-
-      cls_past: p.cls,
-      cls_now: n.cls,
-      cls_delta: delta(n.cls, p.cls),
 
       a11y_past: p.a11y,
       a11y_now: n.a11y,
@@ -157,6 +155,14 @@ function main() {
       seo_past: p.seo,
       seo_now: n.seo,
       seo_delta: delta(n.seo, p.seo),
+
+      lcp_past_ms: p.lcpMs,
+      lcp_now_ms: n.lcpMs,
+      lcp_delta_ms: delta(n.lcpMs, p.lcpMs),
+
+      cls_past: p.cls,
+      cls_now: n.cls,
+      cls_delta: delta(n.cls, p.cls),
     });
   }
 
@@ -176,17 +182,28 @@ function main() {
     `# 3-Month Comparison (All URLs)\n\n` +
     `- Now: ${nowDate.toISOString().slice(0, 10)}\n` +
     `- Past: ${hasPast ? pastDate : "(not enough history yet)"}\n` +
-    `- Rows: ${rows.length}\n\n`;
+    `- Rows: ${rows.length}\n` +
+    `- Columns: Perf/A11y/BP/SEO/LCP/CLS (Past→Now, Δ)\n\n`;
 
   const tableHead =
-    `| Device | URL | Perf (Past→Now, Δ) | LCP (Past→Now, Δ) | CLS (Past→Now, Δ) |\n` +
-    `|---|---|---:|---:|---:|\n`;
+    `| Device | URL | Perf (Past→Now, Δ) | A11y (Past→Now, Δ) | BP (Past→Now, Δ) | SEO (Past→Now, Δ) | LCP (Past→Now, Δ) | CLS (Past→Now, Δ) |\n` +
+    `|---|---|---:|---:|---:|---:|---:|---:|\n`;
 
   const mdLines = rows.map((r) => {
     const perfCell = `${r.perf_past ?? ""}→${r.perf_now ?? ""} (${r.perf_delta ?? ""})`;
-    const lcpCell = `${msToSec(r.lcp_past_ms)}→${msToSec(r.lcp_now_ms)} (${r.lcp_delta_ms == null ? "" : (r.lcp_delta_ms / 1000).toFixed(2)})`;
-    const clsCell = `${fmtNum(r.cls_past, 3)}→${fmtNum(r.cls_now, 3)} (${r.cls_delta == null ? "" : r.cls_delta.toFixed(3)})`;
-    return `| ${r.device} | ${r.url} | ${perfCell} | ${lcpCell} | ${clsCell} |`;
+    const a11yCell = `${r.a11y_past ?? ""}→${r.a11y_now ?? ""} (${r.a11y_delta ?? ""})`;
+    const bpCell = `${r.bp_past ?? ""}→${r.bp_now ?? ""} (${r.bp_delta ?? ""})`;
+    const seoCell = `${r.seo_past ?? ""}→${r.seo_now ?? ""} (${r.seo_delta ?? ""})`;
+
+    const lcpCell =
+      `${msToSec(r.lcp_past_ms)}→${msToSec(r.lcp_now_ms)} ` +
+      `(${r.lcp_delta_ms == null ? "" : (r.lcp_delta_ms / 1000).toFixed(2)})`;
+
+    const clsCell =
+      `${fmtNum(r.cls_past, 3)}→${fmtNum(r.cls_now, 3)} ` +
+      `(${r.cls_delta == null ? "" : r.cls_delta.toFixed(3)})`;
+
+    return `| ${r.device} | ${r.url} | ${perfCell} | ${a11yCell} | ${bpCell} | ${seoCell} | ${lcpCell} | ${clsCell} |`;
   });
 
   const md =
@@ -206,12 +223,6 @@ function main() {
     "perf_past",
     "perf_now",
     "perf_delta",
-    "lcp_sec_past",
-    "lcp_sec_now",
-    "lcp_sec_delta",
-    "cls_past",
-    "cls_now",
-    "cls_delta",
     "a11y_past",
     "a11y_now",
     "a11y_delta",
@@ -221,6 +232,12 @@ function main() {
     "seo_past",
     "seo_now",
     "seo_delta",
+    "lcp_sec_past",
+    "lcp_sec_now",
+    "lcp_sec_delta",
+    "cls_past",
+    "cls_now",
+    "cls_delta",
   ].join(",");
 
   const csvLines = rows.map((r) => {
@@ -231,24 +248,30 @@ function main() {
     return [
       csvEscape(r.device),
       csvEscape(r.url),
+
       r.perf_past ?? "",
       r.perf_now ?? "",
       r.perf_delta ?? "",
-      lcpPastS,
-      lcpNowS,
-      lcpDeltaS,
-      r.cls_past ?? "",
-      r.cls_now ?? "",
-      r.cls_delta == null ? "" : r.cls_delta.toFixed(3),
+
       r.a11y_past ?? "",
       r.a11y_now ?? "",
       r.a11y_delta ?? "",
+
       r.bp_past ?? "",
       r.bp_now ?? "",
       r.bp_delta ?? "",
+
       r.seo_past ?? "",
       r.seo_now ?? "",
       r.seo_delta ?? "",
+
+      lcpPastS,
+      lcpNowS,
+      lcpDeltaS,
+
+      r.cls_past ?? "",
+      r.cls_now ?? "",
+      r.cls_delta == null ? "" : r.cls_delta.toFixed(3),
     ].join(",");
   });
 
