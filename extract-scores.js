@@ -33,13 +33,11 @@ function safeJoinCwd(p) {
 }
 
 function extractFromManifestEntry(entry, device) {
-  // 1) 점수는 manifest summary에서 우선 채우고
   const perf = entry.summary?.performance;
   const acc = entry.summary?.accessibility;
   const bp = entry.summary?.["best-practices"] ?? entry.summary?.bestPractices;
   const seo = entry.summary?.seo;
 
-  // 2) metrics(LCP/CLS 등)는 report jsonPath를 열어서 audits에서 채움
   let metrics = {};
   const reportPath = safeJoinCwd(entry.jsonPath);
   const reportJson = reportPath ? readJsonSafe(reportPath) : null;
@@ -117,7 +115,6 @@ function pickNumber(obj, candidates) {
 }
 
 function extractOneReport(reportJson) {
-  // ✅ report가 { lhr: {...} }로 감싸진 케이스 대응
   const root = reportJson?.lhr?.categories ? reportJson.lhr : reportJson;
 
   const c = root.categories || {};
@@ -128,15 +125,14 @@ function extractOneReport(reportJson) {
   const bestPractices = c["best-practices"]?.score;
   const seo = c.seo?.score;
 
-  // ✅ LCP/CLS는 케이스별 위치가 달라서 fallback 포함
   const lcp = pickNumber(audits, [
-    ["largest-contentful-paint", "numericValue"],                 // 일반 audit
-    ["metrics", "details", "items", 0, "largestContentfulPaint"], // metrics item
+    ["largest-contentful-paint", "numericValue"],
+    ["metrics", "details", "items", 0, "largestContentfulPaint"],
   ]);
 
   const cls = pickNumber(audits, [
-    ["cumulative-layout-shift", "numericValue"],                  // 일반 audit
-    ["metrics", "details", "items", 0, "cumulativeLayoutShift"],  // metrics item
+    ["cumulative-layout-shift", "numericValue"],
+    ["metrics", "details", "items", 0, "cumulativeLayoutShift"],
   ]);
 
   const tbt = pickNumber(audits, [
@@ -172,7 +168,6 @@ function loadReports({ dir, device }) {
       const reps = data.filter((x) => x.isRepresentativeRun);
       const rows = (reps.length ? reps : data).map((entry) => extractFromManifestEntry(entry, device));
 
-      // URL 중복 제거(대표 run 기준이면 보통 없지만 안전하게)
       const seen = new Set();
       for (const r of rows) {
         if (!r.url) continue;
@@ -374,7 +369,6 @@ function buildSlackPayload(summary) {
 }
 
 function buildAiInput(summary) {
-  // AI에는 “문제 URL만” 주는 게 효율 좋음
   return {
     thresholds: summary.thresholds,
     overall: summary.overall,
@@ -388,13 +382,11 @@ function main() {
   const allItems = RESULT_DIRS.flatMap(loadReports);
   const summary = buildSummary(allItems);
 
-  // 파일 생성
   fs.writeFileSync("results/summary.json", JSON.stringify(summary, null, 2), "utf-8");
   fs.writeFileSync("results/summary.md", buildSummaryMarkdown(summary), "utf-8");
   fs.writeFileSync("results/slack-payload.json", JSON.stringify(buildSlackPayload(summary), null, 2), "utf-8");
   fs.writeFileSync("results/ai-input.json", JSON.stringify(buildAiInput(summary), null, 2), "utf-8");
 
-  // 콘솔에도 간단히
   console.log(`\n📌 Overall status: ${summary.overall.status}`);
   if (summary.overall.worst) {
     console.log(
