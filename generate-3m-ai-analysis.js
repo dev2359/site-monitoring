@@ -19,7 +19,7 @@ const OUT_MD = path.join("results", "compare-3m-ai.md");
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const MAX_OUT = parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || "450", 10);
+const MAX_OUT = parseInt(process.env.OPENAI_MAX_OUTPUT_TOKENS || "800", 10);
 
 function ensureOutDir() {
   fs.mkdirSync(path.dirname(OUT_MD), { recursive: true });
