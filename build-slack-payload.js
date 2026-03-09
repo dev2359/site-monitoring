@@ -159,7 +159,7 @@ function buildProblemLines(problems, warn01, crit01, limit) {
     const short = `${u.host}${u.pathname}${u.search ? "…" : ""}`;
     
     return `• [${deviceTag(p.device)}] <${p.url}|${short}>
-    \`P ${perf} | A ${a11y} | BP ${bp} | SEO ${seo} | LCP ${lcp} | CLS ${cls}\``;
+    \`P ${perf} | A ${a11y} | BP ${bp} | SEO ${seo}\``; // | LCP ${lcp} | CLS ${cls} 너무 길어져서 뺌
   });
 }
 
