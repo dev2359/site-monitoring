@@ -191,7 +191,7 @@ function main() {
       : statusFromPerf(worst?.performance, warn01, crit01);
 
   const headerEmoji = statusEmoji(derivedStatus);
-  const headerText = `${headerEmoji} Daily Lighthouse (${date}) - ${derivedStatus}`;
+  const headerText = `${headerEmoji} ${derivedStatus} (${date}) `;
 
   const itemsMobile = items.filter((p) => p.device === "mobile");
   const itemsDesktop = items.filter((p) => p.device === "desktop");
