@@ -40,7 +40,7 @@ module.exports = {
       	'https://celladix.sg',
       	'https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum'
        ],
-      numberOfRuns: 5,
+      numberOfRuns: 3,
       output: ['html', 'json'], 
       settings: {
   		formFactor: "mobile",
