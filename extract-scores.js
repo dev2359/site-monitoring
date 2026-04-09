@@ -153,6 +153,38 @@ function extractOneReport(reportJson) {
   };
 }
 
+function avgNumber(values) {
+  const nums = values.filter((v) => typeof v === "number" && Number.isFinite(v));
+  if (!nums.length) return undefined;
+  return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+}
+
+function aggregateByDeviceUrl(items) {
+  const grouped = new Map();
+  for (const item of items) {
+    const key = `${item.device}@@${item.url}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item);
+  }
+
+  return [...grouped.values()].map((rows) => {
+    const base = rows[0];
+    return {
+      ...base,
+      performance: avgNumber(rows.map((r) => r.performance)),
+      accessibility: avgNumber(rows.map((r) => r.accessibility)),
+      bestPractices: avgNumber(rows.map((r) => r.bestPractices)),
+      seo: avgNumber(rows.map((r) => r.seo)),
+      metrics: {
+        lcp: avgNumber(rows.map((r) => r.metrics?.lcp)),
+        cls: avgNumber(rows.map((r) => r.metrics?.cls)),
+        tbt: avgNumber(rows.map((r) => r.metrics?.tbt)),
+        si: avgNumber(rows.map((r) => r.metrics?.si)),
+      },
+    };
+  });
+}
+
 function loadReports({ dir, device }) {
   if (!fs.existsSync(dir)) return [];
 
@@ -165,14 +197,9 @@ function loadReports({ dir, device }) {
     if (!data) continue;
 
     if (isManifestJson(data)) {
-      const reps = data.filter((x) => x.isRepresentativeRun);
-      const rows = (reps.length ? reps : data).map((entry) => extractFromManifestEntry(entry, device));
-
-      const seen = new Set();
+      const rows = data.map((entry) => extractFromManifestEntry(entry, device));
       for (const r of rows) {
         if (!r.url) continue;
-        if (seen.has(r.url)) continue;
-        seen.add(r.url);
         items.push(r);
       }
       continue;
@@ -208,7 +235,8 @@ function loadReports({ dir, device }) {
 }
 
 function buildSummary(allItems) {
-  const okItems = allItems.filter((x) => x.ok && typeof x.performance === "number");
+  const okItemsRaw = allItems.filter((x) => x.ok && typeof x.performance === "number");
+  const okItems = aggregateByDeviceUrl(okItemsRaw);
 
   const worst = okItems.reduce(
     (acc, cur) => (cur.performance < acc.performance ? cur : acc),
