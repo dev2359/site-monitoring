@@ -43,16 +43,17 @@ module.exports = {
       numberOfRuns: 2,
       output: ['html', 'json'], 
       settings: {
+  		formFactor: "mobile",
         emulatedFormFactor: 'mobile',              
         throttling: {
           rttMs: 40,
           throughputKbps: 10240,
           cpuSlowdownMultiplier: 4,
-          requestLatencyMs: 0,
-          downloadThroughputKbps: 0,
-          uploadThroughputKbps: 0,
+		  requestLatencyMs: 562.5,
+		  downloadThroughputKbps: 1474.56,
+		  uploadThroughputKbps: 675,
         },
-        throttlingMethod: 'devtools'
+        throttlingMethod: 'simulate'
       }
     },
     upload: {
