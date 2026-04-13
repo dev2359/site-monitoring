@@ -40,10 +40,11 @@ module.exports = {
       	'https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum'
        ],
       numberOfRuns: 3,
-      output: ['html', 'json'], 
-      settings: {		  
-  		formFactor: "desktop",
-        emulatedFormFactor: 'desktop',     
+      output: ["html", "json"],
+      settings: {
+        formFactor: "desktop",
+        screenEmulation: { disabled: true },
+        throttlingMethod: "devtools",
         throttling: {
           rttMs: 40,
           throughputKbps: 10240,
@@ -52,8 +53,7 @@ module.exports = {
           downloadThroughputKbps: 0,
           uploadThroughputKbps: 0,
         },
-        throttlingMethod: 'devtools'
-      }
+      },
     },
     upload: {
       target: 'filesystem',
