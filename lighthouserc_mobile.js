@@ -51,7 +51,7 @@ module.exports = {
           deviceScaleFactor: 2,
           disabled: false,
         },
-        throttlingMethod: "simulate",
+	    throttlingMethod: 'devtools',
         throttling: {
           requestLatencyMs: 562.5,
           downloadThroughputKbps: 1474.56,
