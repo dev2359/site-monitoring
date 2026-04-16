@@ -39,26 +39,35 @@ function extractFromManifestEntry(entry, device) {
   const seo = entry.summary?.seo;
 
   let metrics = {};
+  let runtimeError = null;
   const reportPath = safeJoinCwd(entry.jsonPath);
   const reportJson = reportPath ? readJsonSafe(reportPath) : null;
 
   if (reportJson?.categories || reportJson?.lhr?.categories) {
     const extracted = extractOneReport(reportJson);
     metrics = extracted.metrics || {};
+    runtimeError = extracted.runtimeError || null;
   } else {
     metrics = {};
+    runtimeError = reportJson?.runtimeError || null;
   }
 
+  const hasPerf = typeof perf === "number" && Number.isFinite(perf);
+  const inferredRuntimeError =
+    runtimeError ||
+    (hasPerf ? null : { message: "Missing performance score in LHCI manifest entry" });
+  
   return {
     device,
     file: entry.jsonPath || "(manifest)",
-    ok: true,
+    ok: hasPerf && !inferredRuntimeError,
     url: entry.url,
     performance: perf,
     accessibility: acc,
     bestPractices: bp,
     seo,
     metrics,
+    runtimeError: inferredRuntimeError,
   };
 }
 
@@ -237,6 +246,7 @@ function loadReports({ dir, device }) {
 function buildSummary(allItems) {
   const okItemsRaw = allItems.filter((x) => x.ok && typeof x.performance === "number");
   const okItems = aggregateByDeviceUrl(okItemsRaw);
+  const invalidItems = allItems.filter((x) => !x.ok || typeof x.performance !== "number");
 
   const worst = okItems.reduce(
     (acc, cur) => (cur.performance < acc.performance ? cur : acc),
@@ -263,6 +273,7 @@ function buildSummary(allItems) {
         : null,
       totalReports: allItems.length,
       validReports: okItems.length,
+      invalidReports: invalidItems.length,
     },
     problems: problems.map((p) => ({
       device: p.device,
@@ -274,7 +285,7 @@ function buildSummary(allItems) {
       metrics: p.metrics,
     })),
     
-    items: okItems.map((x) => ({
+    invalid: invalidItems.map((x) => ({
       device: x.device,
       url: x.url,
       performance: x.performance,
@@ -299,6 +310,7 @@ function buildSummaryMarkdown(summary) {
 
 - **Status:** ${overall.status}
 - **Total reports:** ${overall.totalReports} (valid: ${overall.validReports})
+- **Invalid reports:** ${overall.invalidReports ?? 0}
 - **Thresholds:** WARN < ${Math.round(THRESHOLDS.warn * 100)}, CRIT < ${Math.round(
     THRESHOLDS.crit * 100
   )}
