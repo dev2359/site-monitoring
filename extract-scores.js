@@ -285,7 +285,7 @@ function buildSummary(allItems) {
       metrics: p.metrics,
     })),
     
-    invalid: invalidItems.map((x) => ({
+    items: okItems.map((x) => ({
       device: x.device,
       url: x.url,
       performance: x.performance,
@@ -294,7 +294,7 @@ function buildSummary(allItems) {
       seo: x.seo,
       metrics: x.metrics,
     })),
-    invalid: allItems.filter((x) => !x.ok).map((x) => ({
+    invalid: invalidItems.map((x) => ({
       device: x.device,
       file: x.file,
       url: x.url,
