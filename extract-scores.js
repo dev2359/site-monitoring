@@ -304,7 +304,10 @@ function buildSummary(allItems) {
 }
 
 function buildSummaryMarkdown(summary) {
-  const { overall, items, problems, invalid } = summary;
+  const overall = summary?.overall || {};
+  const items = Array.isArray(summary?.items) ? summary.items : [];
+  const problems = Array.isArray(summary?.problems) ? summary.problems : [];
+  const invalid = Array.isArray(summary?.invalid) ? summary.invalid : [];
 
   const header = `# 📊 Lighthouse Daily Summary
 
