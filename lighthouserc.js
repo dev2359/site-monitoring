@@ -37,7 +37,11 @@ module.exports = {
       	'https://lactomedi.sg',
       	'https://lactomedi.sg/products/intimate-care-gel-for-women',
       	'https://celladix.sg',
-      	'https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum'
+      	'https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum',
+      	'https://lactomedi.jp',
+      	'https://lactomedi.jp/products/%E3%83%91%E3%83%92%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9F%E3%82%B9%E3%83%88',
+      	'https://celladix.jp',
+      	'https://celladix.jp/products/sebum-rebalancing-rx-131-ampoule',
        ],
       numberOfRuns: 5,
       output: ["html", "json"],
