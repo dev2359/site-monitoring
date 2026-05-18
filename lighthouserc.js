@@ -62,7 +62,9 @@ module.exports = {
     upload: {
       target: 'filesystem',
       outputDir: './results/desktop',
-      reportFilenamePattern: 'report-pc-__url.host__-__index__'      
+      // %%HOSTNAME%%, %%PATHNAME%%, %%DATETIME%%, %%EXTENSION%% 이 LHCI의 유효한 placeholder.
+      // 과거의 __url.host__-__index__는 리터럴로 처리되어 모든 URL이 같은 파일에 덮어써졌음.
+      reportFilenamePattern: 'pc-%%HOSTNAME%%%%PATHNAME%%-%%DATETIME%%.report.%%EXTENSION%%'
     }
   }
 };

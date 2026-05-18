@@ -206,47 +206,73 @@ function loadReports({ dir, device }) {
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
   const items = [];
 
+  // 1) manifest.json 이 있으면 그것을 단일 소스로 사용. 개별 report 파일까지 같이 읽으면
+  //    동일 run을 두 번 카운트해 trimmedMean이 왜곡된다.
+  let manifestSeen = false;
   for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const data = readJsonSafe(fullPath);
-    if (!data) continue;
+    const data = readJsonSafe(path.join(dir, file));
+    if (!data || !isManifestJson(data)) continue;
+    manifestSeen = true;
+    for (const entry of data) {
+      const r = extractFromManifestEntry(entry, device);
+      if (!r.url) continue;
+      items.push(r);
+    }
+  }
 
-    if (isManifestJson(data)) {
-      const rows = data.map((entry) => extractFromManifestEntry(entry, device));
-      for (const r of rows) {
-        if (!r.url) continue;
-        items.push(r);
+  // 2) manifest 가 없는 경우만 개별 report 파일을 fallback 으로 처리.
+  if (!manifestSeen) {
+    for (const file of files) {
+      const fullPath = path.join(dir, file);
+      const data = readJsonSafe(fullPath);
+      if (!data) continue;
+
+      if (!data.categories && !data.lhr?.categories) {
+        items.push({
+          device,
+          file,
+          ok: false,
+          url: data.finalUrl || data.requestedUrl || "(unknown)",
+          runtimeError: data.runtimeError || { message: "Invalid report (no categories)" },
+        });
+        continue;
       }
-      continue;
-    }
 
-    if (!data.categories && !data.lhr?.categories) {
-       items.push({
-         device,
-         file,
-         ok: false,
-         url: data.finalUrl || data.requestedUrl || "(unknown)",
-         runtimeError: data.runtimeError || { message: "Invalid report (no categories)" },
-       });
-       continue;
+      const extracted = extractOneReport(data);
+      items.push({
+        device,
+        file,
+        ok: true,
+        url: extracted.finalUrl,
+        performance: extracted.scores.performance,
+        accessibility: extracted.scores.accessibility,
+        bestPractices: extracted.scores.bestPractices,
+        seo: extracted.scores.seo,
+        metrics: extracted.metrics,
+      });
     }
-
-    const extracted = extractOneReport(data);
-    items.push({
-      device,
-      file,
-      ok: true,
-      url: extracted.finalUrl,
-      performance: extracted.scores.performance,
-      accessibility: extracted.scores.accessibility,
-      bestPractices: extracted.scores.bestPractices,
-      seo: extracted.scores.seo,
-      metrics: extracted.metrics,
-    });
   }
 
   items.sort((a, b) => (a.url || "").localeCompare(b.url || ""));
   return items;
+}
+
+// 모든 URL이 같은 metric 값을 갖는 경우(과거 reportFilenamePattern placeholder 오류 같은
+// 집계 버그)를 조기에 감지하기 위한 sanity check.
+function warnIfMetricsCollapsed(items) {
+  for (const dev of ["desktop", "mobile"]) {
+    const arr = items.filter((x) => x.device === dev);
+    if (arr.length < 3) continue;
+    const lcps = arr.map((x) => x.metrics?.lcp).filter((v) => typeof v === "number");
+    if (lcps.length < 3) continue;
+    const unique = new Set(lcps.map((v) => v.toFixed(4))).size;
+    if (unique === 1) {
+      console.warn(
+        `⚠️ [${dev}] ${arr.length}개 URL이 모두 동일한 LCP(${lcps[0].toFixed(2)}ms)를 가집니다. ` +
+          `LHCI reportFilenamePattern placeholder 또는 manifest jsonPath 확인 필요.`
+      );
+    }
+  }
 }
 
 function buildSummary(allItems) {
@@ -430,6 +456,8 @@ function main() {
 
   const allItems = RESULT_DIRS.flatMap(loadReports);
   const summary = buildSummary(allItems);
+
+  warnIfMetricsCollapsed(summary.items || []);
 
   fs.writeFileSync("results/summary.json", JSON.stringify(summary, null, 2), "utf-8");
   fs.writeFileSync("results/summary.md", buildSummaryMarkdown(summary), "utf-8");
