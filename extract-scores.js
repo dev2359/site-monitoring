@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 
 const THRESHOLDS = {
-  warn: 0.7, // 80점 미만이면 WARN
-  crit: 0.6, // 70점 미만이면 CRIT
+  warn: 0.8, // 80점 미만이면 WARN
+  crit: 0.6, // 60점 미만이면 CRIT
 };
 
 const RESULT_DIRS = [
@@ -162,10 +162,16 @@ function extractOneReport(reportJson) {
   };
 }
 
-function avgNumber(values) {
+function trimmedMean(values) {
   const nums = values.filter((v) => typeof v === "number" && Number.isFinite(v));
   if (!nums.length) return undefined;
-  return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+  // 4개 이상일 때만 상하 1개씩 제외 (runner outlier 완화). 3개 이하는 그대로 평균.
+  if (nums.length <= 3) {
+    return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+  }
+  const sorted = [...nums].sort((a, b) => a - b);
+  const trimmed = sorted.slice(1, -1);
+  return trimmed.reduce((sum, n) => sum + n, 0) / trimmed.length;
 }
 
 function aggregateByDeviceUrl(items) {
@@ -180,15 +186,15 @@ function aggregateByDeviceUrl(items) {
     const base = rows[0];
     return {
       ...base,
-      performance: avgNumber(rows.map((r) => r.performance)),
-      accessibility: avgNumber(rows.map((r) => r.accessibility)),
-      bestPractices: avgNumber(rows.map((r) => r.bestPractices)),
-      seo: avgNumber(rows.map((r) => r.seo)),
+      performance: trimmedMean(rows.map((r) => r.performance)),
+      accessibility: trimmedMean(rows.map((r) => r.accessibility)),
+      bestPractices: trimmedMean(rows.map((r) => r.bestPractices)),
+      seo: trimmedMean(rows.map((r) => r.seo)),
       metrics: {
-        lcp: avgNumber(rows.map((r) => r.metrics?.lcp)),
-        cls: avgNumber(rows.map((r) => r.metrics?.cls)),
-        tbt: avgNumber(rows.map((r) => r.metrics?.tbt)),
-        si: avgNumber(rows.map((r) => r.metrics?.si)),
+        lcp: trimmedMean(rows.map((r) => r.metrics?.lcp)),
+        cls: trimmedMean(rows.map((r) => r.metrics?.cls)),
+        tbt: trimmedMean(rows.map((r) => r.metrics?.tbt)),
+        si: trimmedMean(rows.map((r) => r.metrics?.si)),
       },
     };
   });

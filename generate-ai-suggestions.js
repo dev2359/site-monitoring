@@ -29,7 +29,7 @@ function writeText(p, text) {
 
 function buildPrompt(input) {
   const warn = Math.round((input.thresholds?.warn ?? 0.8) * 100);
-  const crit = Math.round((input.thresholds?.crit ?? 0.7) * 100);
+  const crit = Math.round((input.thresholds?.crit ?? 0.6) * 100);
 
   return `
 너는 Lighthouse 성능 개선 전문가다.

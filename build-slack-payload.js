@@ -14,7 +14,7 @@ const AI_MD_PATH = path.join("results", "ai-suggestions.md");
 const OUT_PATH = path.join("results", "slack-payload.json");
 
 const TOP_N_PER_DEVICE = 3; // 출력 개수
-const DEFAULT_THRESHOLDS = { warn: 0.7, crit: 0.6 }; // Perf 기준
+const DEFAULT_THRESHOLDS = { warn: 0.8, crit: 0.6 }; // Perf 기준
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));

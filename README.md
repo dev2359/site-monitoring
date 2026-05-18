@@ -73,18 +73,30 @@ Job 구성:
 
 - `numberOfRuns: 5`
 - `formFactor: "mobile"`
-- `screenEmulation` 활성화
+- `screenEmulation` 활성화 (390×844, DPR 2 — iPhone 계열에 가깝게)
 - `throttlingMethod: "simulate"`
+- `downloadThroughputKbps: 5000`, `requestLatencyMs: 150` (국내 LTE/5G 체감에 근접)
+- `cpuSlowdownMultiplier: 1` (CPU throttle 없음 — 상위 단말 기준)
 - `maxWaitForLoad: 90000`
+
+> 주의: Lighthouse 공식 Mobile 프리셋(CPU 4x, Slow 4G)보다 느슨하므로, 본 측정 점수는 PageSpeed Insights/Chrome DevTools 기본 Mobile 결과보다 높게 나옵니다. 실제 자사 이용자(국내 LTE/5G·상위 iPhone) 환경에 맞춘 의도적인 설정입니다.
 
 ## 집계/판정 로직
 
 `extract-scores.js`에서:
 
 - Lighthouse 결과(JSON/manifest)를 파싱
-- URL+디바이스 단위로 평균 집계
-- `warn`, `crit` 임계값으로 상태 판정
+- URL+디바이스 단위로 **trimmed mean**(상하 1개 제외 평균, 4 run 이상일 때) 집계 → runner 노이즈/outlier 완화
+- 임계값(아래)으로 상태 판정
 - 문제 URL 목록 및 invalid 보고서 생성
+
+### 임계값 (Performance score, 100점 만점)
+
+- `WARN`: 80 미만 (`warn: 0.8`)
+- `CRIT`: 60 미만 (`crit: 0.6`)
+- `OK`: 80 이상
+
+Slack 알림은 전체 `overall.status !== "OK"`일 때만 전송됩니다.
 
 ## 로컬 실행(선택)
 
