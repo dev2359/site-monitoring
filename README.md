@@ -18,7 +18,7 @@
 - `lighthouserc.js`: Desktop LHCI 설정
 - `lighthouserc_mobile.js`: Mobile LHCI 설정
 - `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성
-- `build-3m-table.js`: 현재 vs 3개월 전 비교 표/CSV 생성
+- `build-3m-table.js`: 현재 vs 3개월 전 비교 표/CSV 생성 (baseline floor: `2026-04-22` — 측정 환경/URL 셋이 안정된 이후 스냅샷만 비교 대상)
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
 - `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안
 - `build-slack-payload.js`: Slack 메시지 payload 생성

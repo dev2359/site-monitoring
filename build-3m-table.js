@@ -24,6 +24,10 @@ const OUT_CSV = path.join("results", "compare-3m-all.csv");
 
 const PAST_DAYS = 90;
 
+// baseline floor: 측정 환경/URL 셋이 안정화되기 전 스냅샷은 비교 대상에서 제외.
+// 이력이 90일 이상 쌓이면 자연스럽게 이 값보다 늦은 스냅샷이 선택된다.
+const EARLIEST_BASELINE_DATE = "2026-04-22";
+
 function exists(p) {
   return fs.existsSync(p);
 }
@@ -164,7 +168,10 @@ function main() {
   const nowDate = new Date();
   const target = new Date(nowDate.getTime() - PAST_DAYS * 24 * 60 * 60 * 1000);
 
-  const pastEntry = pickNearestEntry(target, entries);
+  const earliestMs = new Date(`${EARLIEST_BASELINE_DATE}T00:00:00Z`).getTime();
+  const eligibleEntries = entries.filter((e) => e.date.getTime() >= earliestMs);
+
+  const pastEntry = pickNearestEntry(target, eligibleEntries);
 
   let pastIdx = new Map();
   let hasPast = false;
@@ -334,7 +341,7 @@ function main() {
   console.log(`✅ Wrote: ${OUT_MD}`);
   console.log(`✅ Wrote: ${OUT_CSV}`);
   console.log(`ℹ️ Past snapshot used: ${hasPast ? pastLabel : "none"}`);
-  console.log(`ℹ️ History candidates (latest per day): ${entries.length}`);
+  console.log(`ℹ️ History candidates (latest per day): ${entries.length} (eligible: ${eligibleEntries.length}, floor: ${EARLIEST_BASELINE_DATE})`);
 }
 
 main();
