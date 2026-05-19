@@ -35,10 +35,13 @@ async function postJson(url, body, headers = {}) {
   return { status: res.status, body: parsed };
 }
 
+// 모든 chat.postMessage 호출에 공통 적용 — Slack 의 자동 link/media preview 비활성화.
+const UNFURL_OFF = { unfurl_links: false, unfurl_media: false };
+
 async function postViaBot(payload) {
   const auth = { Authorization: `Bearer ${BOT_TOKEN}` };
 
-  const mainBody = { channel: CHANNEL_ID, ...payload.main };
+  const mainBody = { channel: CHANNEL_ID, ...UNFURL_OFF, ...payload.main };
   const mainRes = await postJson("https://slack.com/api/chat.postMessage", mainBody, auth);
   if (!mainRes.body?.ok) {
     throw new Error(`main post failed: ${JSON.stringify(mainRes.body)}`);
@@ -59,6 +62,7 @@ async function postViaBot(payload) {
   const threadBody = {
     channel: CHANNEL_ID,
     thread_ts: ts,
+    ...UNFURL_OFF,
     ...payload.thread,
   };
   const threadRes = await postJson("https://slack.com/api/chat.postMessage", threadBody, auth);
@@ -69,8 +73,9 @@ async function postViaBot(payload) {
 }
 
 async function postViaWebhook(payload) {
-  // Webhook 은 스레드 미지원. main 만 전송.
-  const res = await postJson(WEBHOOK_URL, payload.main || payload);
+  // Webhook 은 스레드 미지원. main 만 전송. unfurl 옵션도 같이.
+  const body = { ...UNFURL_OFF, ...(payload.main || payload) };
+  const res = await postJson(WEBHOOK_URL, body);
   if (res.status >= 400 || res.body?.raw === "invalid_payload") {
     throw new Error(`webhook post failed: ${res.status} ${JSON.stringify(res.body)}`);
   }

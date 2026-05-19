@@ -297,10 +297,11 @@ async function handleViewSubmission(payload) {
 }
 
 // chat.postMessage — thread_ts 가 있으면 스레드 안에 게시.
+// unfurl_links/unfurl_media false 로 링크 미리보기 비활성화.
 async function slackPostMessage({ channel, thread_ts, text }) {
   if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN missing");
   if (!channel) throw new Error("channel missing");
-  const body = { channel, text };
+  const body = { channel, text, unfurl_links: false, unfurl_media: false };
   if (thread_ts) body.thread_ts = thread_ts;
   const res = await fetch("https://slack.com/api/chat.postMessage", {
     method: "POST",
