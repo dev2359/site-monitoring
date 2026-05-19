@@ -488,12 +488,35 @@ function buildAiInput(summary) {
   byHost.sort((a, b) => a._sort - b._sort);
   for (const h of byHost) delete h._sort;
 
+  // Slack 메시지가 실제로 노출할 URL 셋(Top 3 Mobile + Top 3 Desktop, perf 오름차순) 을
+  // AI 에 전달해 Top URL Actions 가 정확히 이 URL 들을 같은 순서로 다루도록 한다.
+  const TOP_N_PER_DEVICE_FOR_SLACK = 3;
+  const sortByPerfAsc = (arr) =>
+    arr.slice().sort((a, b) => (a.performance ?? 1) - (b.performance ?? 1));
+  const problemsList = Array.isArray(summary.problems) ? summary.problems : [];
+  const slackTargets = [
+    ...sortByPerfAsc(problemsList.filter((p) => p.device === "mobile")).slice(
+      0,
+      TOP_N_PER_DEVICE_FOR_SLACK
+    ),
+    ...sortByPerfAsc(problemsList.filter((p) => p.device === "desktop")).slice(
+      0,
+      TOP_N_PER_DEVICE_FOR_SLACK
+    ),
+  ].map((p) => ({
+    device: p.device,
+    url: p.url,
+    performance: p.performance,
+    metrics: p.metrics,
+  }));
+
   return {
     generatedAt: summary.generatedAt,
     thresholds: summary.thresholds,
     overall: summary.overall,
     problems: summary.problems,
     byHost,
+    slackTargets,
   };
 }
 

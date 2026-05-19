@@ -359,35 +359,28 @@ function main() {
       ? `*AI Note*\n\`\`\`\n${ai.rawSnippet}\n\`\`\``
       : null;
 
-  // Top URL Actions: AI 가 생성한 URL 별 진단 중 상위 3 개. 각 URL 의 액션 2 개씩 표시.
-  const TOP_URL_LIMIT = 3;
-  const ACTIONS_PER_URL = 2;
-  const topUrlsBlock =
-    ai.topUrls.length > 0
-      ? `*🎯 Top URL Actions*\n${ai.topUrls
-          .slice(0, TOP_URL_LIMIT)
-          .map((u) => {
-            const tag = deviceTag(u.device);
-            const short = shortenUrl(u.url);
-            const acts = u.actions
-              .slice(0, ACTIONS_PER_URL)
-              .map((a) => `   • ${a}`)
-              .join("\n");
-            const head = `*[${tag}] <${u.url}|${short}>* \`P:${u.perf}\``;
-            return acts ? `${head}\n${acts}` : head;
-          })
-          .join("\n\n")}`
-      : null;
+  // (topUrlEntriesForSlack 는 위 owner 멘션 블록 직전에 이미 계산됨 — 그대로 사용)
 
   // WoW 카운트 (compare-wow.csv 가 있을 때만)
   const wow = readWowCounts(WOW_CSV_PATH);
   const wowLine = wow
-    ? `*WoW:* 회귀 ${wow.regressions}건 / 개선 ${wow.improvements}건 _(perf Δ ±${IMPROVEMENT_DELTA} 기준)_`
+    ? `회귀 ${wow.regressions}건 / 개선 ${wow.improvements}건 _(perf Δ ±${IMPROVEMENT_DELTA} 기준)_`
     : null;
 
-  // Owner 멘션 라인 (이번 회차 problems 의 host 기준)
+  // Top URL Actions 노출 URL — Slack 표시 한도 6 개 (Mobile 3 + Desktop 3 매칭).
+  // 단일 큰 블록은 Slack 의 message-level "자세히 보기" 토글을 유발할 수 있어 URL 1 개당 별도 섹션으로 분할.
+  const TOP_URL_LIMIT = 6;
+  const ACTIONS_PER_URL = 3; // 6 개 URL 모두 상세 노출 — 각 URL 당 액션 3 개까지
+  const topUrlEntriesForSlack = ai.topUrls.slice(0, TOP_URL_LIMIT);
+
+  // Owner 멘션 라인 — Top URL Actions 에 노출되는 6 개 URL 의 host 만 대상으로.
+  // (AI 응답이 비어있으면 fallback 으로 Slack 표시되는 Top Mobile/Desktop Problems 의 host 사용)
   const owners = readOwners(OWNERS_PATH);
-  const ownerLines = buildOwnerLines(problems, owners);
+  const ownerSource =
+    topUrlEntriesForSlack.length > 0
+      ? topUrlEntriesForSlack.map((u) => ({ url: u.url }))
+      : [...problemsMobile.slice(0, TOP_N_PER_DEVICE), ...problemsDesktop.slice(0, TOP_N_PER_DEVICE)];
+  const ownerLines = buildOwnerLines(ownerSource, owners);
 
   const runUrl = process.env.GITHUB_RUN_URL;
   const dashboardCtx = {
@@ -429,13 +422,34 @@ function main() {
   if (aiTldrBlock) {
     threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
   }
-  if (topUrlsBlock) {
-    threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: topUrlsBlock } });
+
+  // Top URL Actions — 헤더 한 줄 + URL 1 개당 별도 section 블록.
+  // Slack 의 message-level "자세히 보기" 토글 회피 + 시각적으로 분리되어 가독성 향상.
+  if (topUrlEntriesForSlack.length > 0) {
+    threadBlocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: "*🎯 Top URL Actions*" },
+    });
+    for (const u of topUrlEntriesForSlack) {
+      const tag = deviceTag(u.device);
+      const short = shortenUrl(u.url);
+      const acts = u.actions
+        .slice(0, ACTIONS_PER_URL)
+        .map((a) => `   • ${a}`)
+        .join("\n");
+      const head = `*[${tag}] <${u.url}|${short}>* \`P:${u.perf}\``;
+      const blockText = acts ? `${head}\n${acts}` : head;
+      threadBlocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: blockText },
+      });
+    }
   }
+
   if (ownerLines.length > 0) {
     threadBlocks.push({
       type: "section",
-      text: { type: "mrkdwn", text: `*👥 담당자 멘션*\n${ownerLines.join("\n")}` },
+      text: { type: "mrkdwn", text: `*👥 담당자*\n${ownerLines.join("\n")}` },
     });
   }
 
