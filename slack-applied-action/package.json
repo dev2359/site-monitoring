@@ -1,0 +1,13 @@
+{
+  "name": "slack-applied-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Slack /applied-action slash command handler — appends entries to applied-actions.md in dev2359/site-monitoring via GitHub Contents API.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
