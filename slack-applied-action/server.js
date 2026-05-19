@@ -1,12 +1,23 @@
 /**
- * Slack /applied-action slash command handler.
+ * Slack /applied-action 핸들러 + Message Shortcut(스레드 지원) 핸들러.
  *
- * 흐름:
- *   1. Slack 슬래시 커맨드가 POST /applied-action 으로 호출됨
+ * 엔드포인트:
+ *   - POST /applied-action       — 슬래시 커맨드 (메인 채널 전용 — Slack 정책상 스레드 미지원)
+ *   - POST /slack/interactivity  — Message Shortcut(message_action) → modal open / Modal 제출(view_submission) → 기록.
+ *                                   Shortcut 은 스레드 내 메시지 ⋯ 메뉴에서도 실행 가능 → 결과를 같은 스레드에 게시.
+ *
+ * 흐름 (슬래시 커맨드):
+ *   1. POST /applied-action 호출
  *   2. X-Slack-Signature 검증 (replay 방지 timestamp window 5 분)
- *   3. text 에서 첫 단어가 host 형태(xxx.yyy) 면 host 로 추출, 나머지는 내용
+ *   3. text 첫 단어가 host 형태(xxx.yyy) 면 host 로 추출, 나머지는 내용
  *   4. GitHub Contents API 로 applied-actions.md 를 읽어 SHA 확인 후 PUT 으로 업데이트
- *   5. Slack 에 in_channel 메시지로 결과 응답 (commit short SHA 포함)
+ *   5. SLACK_BOT_TOKEN 이 있으면 chat.postMessage 로 결과 게시, 없으면 인라인 JSON 응답
+ *
+ * 흐름 (Message Shortcut):
+ *   1. 메시지 ⋯ 메뉴에서 Shortcut 클릭 → POST /slack/interactivity (payload.type='message_action')
+ *   2. trigger_id 로 views.open 호출해 host/내용 입력 modal 표시
+ *   3. 사용자가 modal 제출 → POST /slack/interactivity (payload.type='view_submission')
+ *   4. private_metadata 에서 channel/thread_ts 복원, GitHub 업데이트, 스레드(또는 메시지 하단)에 결과 게시
  *
  * 환경변수:
  *   - PORT                  (기본 8080. Railway 가 자동 주입)
@@ -130,13 +141,18 @@ function appendLine(currentMd, dateStr, host, content) {
   return `${trimmed}\n${line}\n`;
 }
 
-// GitHub 업데이트 + 결과 텍스트 반환 (UI 응답 형식은 호출부에서 결정).
-async function recordAppliedAction(form) {
-  const text = (form.text || "").trim();
-  const { host, content } = extractHost(text);
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const user = form.user_name || "unknown";
+function cleanHost(raw) {
+  if (!raw) return null;
+  let h = String(raw).trim();
+  if (!h) return null;
+  h = h.replace(/^https?:\/\//i, "");
+  h = h.split("/")[0];
+  return h.toLowerCase() || null;
+}
 
+// 핵심 기록 로직 (슬래시 커맨드 / Message Shortcut 둘 다에서 호출).
+async function recordAppliedActionCore({ host, content, user }) {
+  const dateStr = new Date().toISOString().slice(0, 10);
   const { content: currentMd, sha } = await githubGetFile();
   const updated = appendLine(currentMd, dateStr, host, content);
   const summary = content.length > 60 ? content.slice(0, 57) + "..." : content;
@@ -144,12 +160,140 @@ async function recordAppliedAction(form) {
   const result = await githubPutFile(updated, sha, commitMessage);
   const commitSha = (result.commit?.sha || "").slice(0, 7);
 
-  return (
-    `✅ applied-actions.md 에 기록됨\n` +
-    `*host:* ${host || "_(미지정)_"}\n` +
-    `*내용:* ${content}\n` +
-    `*commit:* \`${commitSha}\``
-  );
+  return {
+    host,
+    content,
+    commitSha,
+    message:
+      `✅ applied-actions.md 에 기록됨\n` +
+      `*host:* ${host || "_(미지정)_"}\n` +
+      `*내용:* ${content}\n` +
+      `*commit:* \`${commitSha}\``,
+  };
+}
+
+// 슬래시 커맨드 wrapper.
+async function recordAppliedAction(form) {
+  const text = (form.text || "").trim();
+  const { host, content } = extractHost(text);
+  const user = form.user_name || "unknown";
+  const r = await recordAppliedActionCore({ host, content, user });
+  return r.message;
+}
+
+// Message Shortcut callback_id (Slack App 설정과 정확히 일치해야 함).
+const SHORTCUT_CALLBACK_ID = "record_applied_action";
+const MODAL_CALLBACK_ID = "applied_action_modal";
+
+// Slack views.open — Message Shortcut 클릭 시 modal 띄우기.
+async function slackOpenView(triggerId, view) {
+  if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN missing");
+  const res = await fetch("https://slack.com/api/views.open", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify({ trigger_id: triggerId, view }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!json.ok) {
+    throw new Error(`views.open failed: ${json.error || res.status}`);
+  }
+  return json;
+}
+
+function buildAppliedActionModal({ channelId, threadTs }) {
+  return {
+    type: "modal",
+    callback_id: MODAL_CALLBACK_ID,
+    title: { type: "plain_text", text: "Applied Action 기록" },
+    submit: { type: "plain_text", text: "기록" },
+    close: { type: "plain_text", text: "취소" },
+    private_metadata: JSON.stringify({ channelId, threadTs }),
+    blocks: [
+      {
+        type: "input",
+        block_id: "host_block",
+        optional: true,
+        label: { type: "plain_text", text: "Host (선택)" },
+        element: {
+          type: "plain_text_input",
+          action_id: "host_input",
+          placeholder: { type: "plain_text", text: "wellit.co.kr" },
+        },
+        hint: {
+          type: "plain_text",
+          text: "도메인만. https:// 나 path 는 자동 제거됨.",
+        },
+      },
+      {
+        type: "input",
+        block_id: "content_block",
+        label: { type: "plain_text", text: "적용 내용" },
+        element: {
+          type: "plain_text_input",
+          action_id: "content_input",
+          multiline: true,
+          placeholder: {
+            type: "plain_text",
+            text: "예: hero 배너 WebP 변환 + fetchpriority='high' 적용 (LCP 단축 목적)",
+          },
+        },
+      },
+    ],
+  };
+}
+
+// Shortcut 클릭(payload.type='message_action') → modal open.
+// trigger_id 는 3초 안에 사용해야 하므로 동기적으로 처리.
+async function handleMessageAction(payload) {
+  if (payload.callback_id !== SHORTCUT_CALLBACK_ID) {
+    console.warn(`unknown shortcut callback_id: ${payload.callback_id}`);
+    return;
+  }
+  const channelId = payload.channel?.id;
+  const msg = payload.message || {};
+  // 스레드 안에서 호출했으면 부모(thread_ts) 에 답글. 메인 메시지에서 호출했으면 그 메시지를 thread root 로 사용.
+  const threadTs = msg.thread_ts || msg.ts;
+
+  const view = buildAppliedActionModal({ channelId, threadTs });
+  await slackOpenView(payload.trigger_id, view);
+}
+
+// Modal 제출(payload.type='view_submission') → GitHub 기록 + 스레드 응답.
+async function handleViewSubmission(payload) {
+  const values = payload.view?.state?.values || {};
+  const hostRaw = values.host_block?.host_input?.value || "";
+  const content = (values.content_block?.content_input?.value || "").trim();
+  const meta = (() => {
+    try {
+      return JSON.parse(payload.view?.private_metadata || "{}");
+    } catch {
+      return {};
+    }
+  })();
+  const channel = meta.channelId;
+  const threadTs = meta.threadTs;
+  const user = payload.user?.username || payload.user?.name || "unknown";
+
+  const host = cleanHost(hostRaw);
+
+  try {
+    const r = await recordAppliedActionCore({ host, content, user });
+    if (channel) {
+      await slackPostMessage({ channel, thread_ts: threadTs, text: r.message });
+    }
+  } catch (err) {
+    console.error("view submission error:", err);
+    if (channel) {
+      await slackPostMessage({
+        channel,
+        thread_ts: threadTs,
+        text: `❌ 기록 실패: ${err?.message || err}`,
+      }).catch((e) => console.error("error posting failure msg:", e));
+    }
+  }
 }
 
 // chat.postMessage — thread_ts 가 있으면 스레드 안에 게시.
@@ -173,10 +317,82 @@ async function slackPostMessage({ channel, thread_ts, text }) {
   return json;
 }
 
+// Slack Interactivity 엔드포인트 처리: Message Shortcut(message_action) → modal open / Modal 제출(view_submission) → 기록.
+function handleInteractivity(req, res) {
+  let raw = "";
+  req.on("data", (chunk) => (raw += chunk));
+  req.on("end", () => {
+    if (!SLACK_SIGNING_SECRET || !GITHUB_TOKEN || !SLACK_BOT_TOKEN) {
+      res.writeHead(500);
+      res.end("server misconfigured (missing env for interactivity)");
+      return;
+    }
+    if (!verifySlackSignature(req, raw)) {
+      res.writeHead(401);
+      res.end("invalid signature");
+      return;
+    }
+
+    const form = parseUrlEncoded(raw);
+    let payload;
+    try {
+      payload = JSON.parse(form.payload || "{}");
+    } catch (e) {
+      res.writeHead(400);
+      res.end("invalid payload");
+      return;
+    }
+
+    if (payload.type === "message_action") {
+      // Shortcut 클릭 → modal open. trigger_id 는 3초 안에 사용 필요.
+      res.writeHead(200);
+      res.end();
+      handleMessageAction(payload).catch((err) =>
+        console.error("message_action error:", err?.message || err)
+      );
+      return;
+    }
+
+    if (payload.type === "view_submission") {
+      // 필수 입력 검증 — 비었으면 modal 에 errors 표시하며 유지.
+      const content = (
+        payload.view?.state?.values?.content_block?.content_input?.value || ""
+      ).trim();
+      if (!content) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(
+          JSON.stringify({
+            response_action: "errors",
+            errors: { content_block: "내용을 입력해 주세요." },
+          })
+        );
+        return;
+      }
+
+      // 검증 통과 → 200 으로 modal 닫고, GitHub 호출 + chat.postMessage 는 비동기 처리.
+      res.writeHead(200);
+      res.end();
+      handleViewSubmission(payload).catch((err) =>
+        console.error("view_submission error:", err?.message || err)
+      );
+      return;
+    }
+
+    // 그 외 type (block_actions 등) — 일단 200 ack 만.
+    res.writeHead(200);
+    res.end();
+  });
+}
+
 const server = http.createServer((req, res) => {
   if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("ok");
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/slack/interactivity") {
+    handleInteractivity(req, res);
     return;
   }
 

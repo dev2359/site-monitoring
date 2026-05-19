@@ -24,7 +24,8 @@ Slack `/applied-action` 슬래시 커맨드 핸들러. Railway 에 별도 서비
 ## 엔드포인트
 
 - `GET /health` 또는 `GET /` — 헬스 체크 (`ok`)
-- `POST /applied-action` — Slack 슬래시 커맨드 수신
+- `POST /applied-action` — Slack 슬래시 커맨드 수신 (메인 채널 전용 — Slack 정책상 스레드 미지원)
+- `POST /slack/interactivity` — Message Shortcut(메시지 ⋯ 메뉴) + Modal 제출 수신. 스레드 내 메시지에서도 실행 가능, 결과는 같은 스레드에 게시
 
 ## 로컬 실행
 
