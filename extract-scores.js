@@ -520,6 +520,9 @@ function buildAiInput(summary) {
   };
 }
 
+// 외부에서 buildAiInput 만 재호출하고 싶을 때 사용 (예: regenerate-ai-input.js).
+module.exports = { buildAiInput, buildSummary };
+
 function main() {
   ensureDir("results");
 
@@ -542,4 +545,7 @@ function main() {
   console.log(`   Problems: ${summary.problems.length}`);
 }
 
-main();
+// require() 로 import 되면 main() 자동 실행 막기 (regenerate-ai-input.js 등이 모듈로 로드).
+if (require.main === module) {
+  main();
+}

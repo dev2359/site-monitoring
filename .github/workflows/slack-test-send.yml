@@ -1,0 +1,96 @@
+name: Slack Test Send (skip measurements)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test_send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Seed results/summary.json from latest history snapshot
+        run: |
+          mkdir -p results
+          LATEST=$(ls -1 history/*.json | sort | tail -n 1)
+          if [ -z "$LATEST" ]; then
+            echo "❌ history/*.json 없음"
+            exit 1
+          fi
+          echo "Using snapshot: $LATEST"
+          cp "$LATEST" results/summary.json
+          ls -la results/
+
+      - name: Regenerate ai-input.json from summary
+        run: node regenerate-ai-input.js
+
+      - name: Build 3-month comparison table
+        run: node build-3m-table.js
+
+      - name: Build Week-over-Week comparison
+        run: node build-3m-table.js
+        env:
+          PAST_DAYS: "7"
+          OUT_MD: "results/compare-wow.md"
+          OUT_CSV: "results/compare-wow.csv"
+          COMPARE_TITLE: "Week-over-Week Comparison (All URLs)"
+          COMPARE_LABEL: "Past (~7d ago, latest-per-day)"
+
+      - name: Build WoW regressions
+        run: node build-regressions.js
+
+      - name: Generate 3M AI analysis
+        run: node generate-3m-ai-analysis.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1-mini
+          OPENAI_MAX_OUTPUT_TOKENS: "2500"
+
+      - name: Generate AI suggestions
+        run: node generate-ai-suggestions.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1-mini
+          OPENAI_MAX_OUTPUT_TOKENS: "6000"
+
+      - name: Build Slack payload
+        run: node build-slack-payload.js
+        env:
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send Slack message (capture ts for later delete)
+        run: |
+          node send-slack.js 2>&1 | tee /tmp/send-output.txt
+          echo ""
+          echo "=== 발송된 메시지 ts (삭제 시 사용) ==="
+          grep -E "main posted|thread reply posted" /tmp/send-output.txt || true
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Upload artifacts for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slack-test-send-output
+          path: |
+            results/summary.json
+            results/ai-input.json
+            results/ai-suggestions.md
+            results/slack-payload.json
+            results/compare-3m-all.md
+            results/compare-wow.md
+            results/regressions-wow.md
+          if-no-files-found: warn

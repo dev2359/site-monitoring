@@ -1,0 +1,27 @@
+name: Slack Delete Message
+
+on:
+  workflow_dispatch:
+    inputs:
+      ts:
+        description: "삭제할 메시지 ts. 콤마/공백으로 여러 개 가능 (예: 메인 ts, thread reply ts)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Delete message(s)
+        run: node delete-slack-message.js
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          DELETE_TS: ${{ inputs.ts }}
