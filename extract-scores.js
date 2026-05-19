@@ -444,10 +444,56 @@ function buildSlackPayload(summary) {
 }
 
 function buildAiInput(summary) {
+  const items = Array.isArray(summary.items) ? summary.items : [];
+
+  const hostMap = new Map();
+  for (const item of items) {
+    let host;
+    try {
+      host = new URL(item.url).host;
+    } catch {
+      continue;
+    }
+    if (!hostMap.has(host)) hostMap.set(host, { mobile: [], desktop: [] });
+    const bucket = hostMap.get(host)[item.device];
+    if (bucket) bucket.push(item);
+  }
+
+  const mean = (a) => a.reduce((s, n) => s + n, 0) / a.length;
+  const byHost = [];
+  for (const [host, byDev] of hostMap.entries()) {
+    const stat = { host };
+    let worst = 1;
+    for (const dev of ["mobile", "desktop"]) {
+      const arr = byDev[dev];
+      if (!arr.length) continue;
+      const perfs = arr.map((x) => x.performance).filter((v) => typeof v === "number");
+      const lcps = arr.map((x) => x.metrics?.lcp).filter((v) => typeof v === "number");
+      const clss = arr.map((x) => x.metrics?.cls).filter((v) => typeof v === "number");
+      const tbts = arr.map((x) => x.metrics?.tbt).filter((v) => typeof v === "number");
+      stat[dev] = {
+        urls: arr.length,
+        perfAvg: perfs.length ? Math.round(mean(perfs) * 100) : null,
+        perfMin: perfs.length ? Math.round(Math.min(...perfs) * 100) : null,
+        lcpAvgMs: lcps.length ? Math.round(mean(lcps)) : null,
+        clsAvg: clss.length ? Number(mean(clss).toFixed(3)) : null,
+        tbtAvgMs: tbts.length ? Math.round(mean(tbts)) : null,
+        problemCount: arr.filter((x) => statusFromPerf(x.performance) !== "OK").length,
+      };
+      if (perfs.length) worst = Math.min(worst, Math.min(...perfs));
+    }
+    stat._sort = worst;
+    byHost.push(stat);
+  }
+  byHost.sort((a, b) => a._sort - b._sort);
+  for (const h of byHost) delete h._sort;
+
   return {
+    generatedAt: summary.generatedAt,
     thresholds: summary.thresholds,
     overall: summary.overall,
-    problems: summary.problems.slice(0, 10),
+    problems: summary.problems,
+    byHost,
   };
 }
 

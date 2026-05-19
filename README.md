@@ -20,7 +20,7 @@
 - `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성
 - `build-3m-table.js`: 현재 vs 3개월 전 비교 표/CSV 생성 (baseline floor: `2026-04-22` — 측정 환경/URL 셋이 안정된 이후 스냅샷만 비교 대상)
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
-- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안
+- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). Slack 에는 Top 3 URL 액션이, GitHub Job Summary 에는 전 섹션이 노출됨
 - `build-slack-payload.js`: Slack 메시지 payload 생성
 - `history/*.json`: 실행별 스냅샷 아카이브
 

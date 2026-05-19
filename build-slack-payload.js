@@ -84,58 +84,104 @@ function countByStatus(items, warn01, crit01) {
 }
 
 /**
- * Parse AI markdown to extract:
- * - TL;DR: lines under "## TL;DR"
- * - actions: top 3 items under "## Recommended actions" or "## Recommendations"
+ * Parse AI markdown produced by generate-ai-suggestions.js (new structured format).
+ * Extracts:
+ * - tldr: lines under "## TL;DR" (up to 3)
+ * - topUrls: per-URL entries under "## Top URL Actions"
+ *   each: { device, url, perf, metric, actions: [...] }
  *
- * This is a tolerant parser: if sections are missing, it falls back gracefully.
+ * Falls back gracefully when sections are missing (e.g., fallback markdown).
  */
 function parseAiMarkdown(md) {
   if (!md) {
-    return { tldr: [], actions: [], rawSnippet: null };
+    return { tldr: [], topUrls: [], rawSnippet: null };
   }
 
   const lines = md.split(/\r?\n/);
 
-  function extractSection(headerRegex) {
-    const startIdx = lines.findIndex((l) => headerRegex.test(l.trim()));
-    if (startIdx === -1) return [];
-
-    const out = [];
-    for (let i = startIdx + 1; i < lines.length; i++) {
+  const tldrStart = lines.findIndex((l) => /^##\s*TL;DR/i.test(l.trim()));
+  const tldr = [];
+  if (tldrStart !== -1) {
+    for (let i = tldrStart + 1; i < lines.length; i++) {
       const t = lines[i].trim();
-      if (/^#{1,6}\s+/.test(t)) break; // next header
-      if (!t) continue;
-      out.push(t);
+      if (/^##\s+/.test(t)) break;
+      const bullet = t.match(/^[-*•]\s+(.+)$/);
+      if (bullet) tldr.push(bullet[1].trim());
+      if (tldr.length >= 3) break;
     }
-    return out;
   }
 
-  const tldrLines = extractSection(/^##\s*TL;DR/i)
-    .map((l) => l.replace(/^-+\s*/, "").replace(/^•\s*/, "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  const topUrls = [];
+  const topUrlStart = lines.findIndex((l) => /^##\s*Top URL Actions/i.test(l.trim()));
+  if (topUrlStart !== -1) {
+    let current = null;
+    let inActions = false;
 
-  let actionLines = extractSection(/^##\s*Recommended actions/i);
-  if (actionLines.length === 0) actionLines = extractSection(/^##\s*Recommendations/i);
+    const pushCurrent = () => {
+      if (current) topUrls.push(current);
+    };
 
-  const actions = actionLines
-    .map((l) =>
-      l
-        .replace(/^\d+\)\s*/, "")
-        .replace(/^\d+\.\s*/, "")
-        .replace(/^[-•]\s*/, "")
-        .trim()
-    )
-    .filter(Boolean)
-    .slice(0, 3);
+    for (let i = topUrlStart + 1; i < lines.length; i++) {
+      const raw = lines[i];
+      const t = raw.trim();
+      if (/^##\s+/.test(t)) {
+        pushCurrent();
+        current = null;
+        break;
+      }
+
+      const h3 = t.match(/^###\s*\[?(\w+)\]?\s+(\S.+?)\s*\(\s*Perf\s*(\d+)\s*\)/i);
+      if (h3) {
+        pushCurrent();
+        const devRaw = h3[1].toLowerCase();
+        current = {
+          device: devRaw.startsWith("m") ? "mobile" : "desktop",
+          url: h3[2].trim().replace(/^[<\[]|[>\]]$/g, ""),
+          perf: parseInt(h3[3], 10),
+          metric: "",
+          actions: [],
+        };
+        inActions = false;
+        continue;
+      }
+      if (!current) continue;
+
+      const stripped = t.replace(/\*\*/g, "");
+
+      if (/^[-*•]?\s*메트릭\s*:/i.test(stripped) || /^[-*•]?\s*Metric\s*:/i.test(stripped)) {
+        const m = stripped.match(/(?:메트릭|Metric)\s*:\s*(.+)$/i);
+        if (m) current.metric = m[1].trim();
+        inActions = false;
+        continue;
+      }
+      if (/^[-*•]?\s*액션\s*:?\s*$/i.test(stripped) || /^[-*•]?\s*Actions?\s*:?\s*$/i.test(stripped)) {
+        inActions = true;
+        continue;
+      }
+
+      if (inActions) {
+        const bullet = raw.match(/^\s*[-*•]\s+(.+)$/);
+        if (bullet) current.actions.push(bullet[1].trim().replace(/\*\*/g, ""));
+      }
+    }
+    pushCurrent();
+  }
 
   const rawSnippet =
-    tldrLines.length === 0 && actions.length === 0
+    tldr.length === 0 && topUrls.length === 0
       ? lines.filter((l) => l.trim()).slice(0, 10).join("\n")
       : null;
 
-  return { tldr: tldrLines, actions, rawSnippet };
+  return { tldr, topUrls, rawSnippet };
+}
+
+function shortenUrl(u) {
+  try {
+    const x = new URL(u);
+    return `${x.host}${x.pathname.length > 1 ? x.pathname : ""}${x.search ? "?…" : ""}`;
+  } catch {
+    return u;
+  }
 }
 
 function buildProblemLines(problems, warn01, crit01, limit) {
@@ -229,9 +275,24 @@ function main() {
       ? `*AI Note*\n\`\`\`\n${ai.rawSnippet}\n\`\`\``
       : null;
 
-  const aiActionsBlock =
-    ai.actions.length > 0
-      ? `*🎯 Recommended actions*\n${ai.actions.map((a) => `• ${a.replace(/^[-•]\s*/, "")}`).join("\n")}`
+  // Top URL Actions: AI 가 생성한 URL 별 진단 중 상위 3 개. 각 URL 의 액션 2 개씩 표시.
+  const TOP_URL_LIMIT = 3;
+  const ACTIONS_PER_URL = 2;
+  const topUrlsBlock =
+    ai.topUrls.length > 0
+      ? `*🎯 Top URL Actions*\n${ai.topUrls
+          .slice(0, TOP_URL_LIMIT)
+          .map((u) => {
+            const tag = deviceTag(u.device);
+            const short = shortenUrl(u.url);
+            const acts = u.actions
+              .slice(0, ACTIONS_PER_URL)
+              .map((a) => `   • ${a}`)
+              .join("\n");
+            const head = `*[${tag}] <${u.url}|${short}>* \`P:${u.perf}\``;
+            return acts ? `${head}\n${acts}` : head;
+          })
+          .join("\n\n")}`
       : null;
 
   // Slack blocks
@@ -243,7 +304,7 @@ function main() {
   ];
 
   if (aiTldrBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
-  if (aiActionsBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiActionsBlock } });
+  if (topUrlsBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: topUrlsBlock } });
 
   const runUrl = process.env.GITHUB_RUN_URL;
   
