@@ -409,15 +409,24 @@ function main() {
     : `${headerText}`;
 
   // ===== THREAD (펼침, 상세 전부) =====
+  // 각 섹션을 헤더 + 항목별 별도 블록으로 분할 → message-level "자세히 보기" 토글 회피.
   const threadBlocks = [];
+
   threadBlocks.push({
     type: "section",
-    text: { type: "mrkdwn", text: `*📱 Top Mobile Problems*\n${topMobileLines.join("\n")}` },
+    text: { type: "mrkdwn", text: "*📱 Top Mobile Problems*" },
   });
+  for (const line of topMobileLines) {
+    threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: line } });
+  }
+
   threadBlocks.push({
     type: "section",
-    text: { type: "mrkdwn", text: `*🖥️ Top Desktop Problems*\n${topDesktopLines.join("\n")}` },
+    text: { type: "mrkdwn", text: "*🖥️ Top Desktop Problems*" },
   });
+  for (const line of topDesktopLines) {
+    threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: line } });
+  }
   if (aiTldrBlock) {
     threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
   }
