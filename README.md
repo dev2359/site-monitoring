@@ -22,7 +22,9 @@
 - `build-regressions.js`: WoW 비교 CSV 에서 perf Δ ≤ -10 인 URL 만 추출해 회귀 보고서 생성 (Job Summary 전용)
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
 - `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 프롬프트에 주입되어 이미 적용한 액션은 재제안하지 않음. Slack 에는 Top 3 URL 액션, GitHub Job Summary 에는 전 섹션 노출
-- `build-slack-payload.js`: Slack 메시지 payload 생성
+- `build-slack-payload.js`: Slack 메시지 payload 생성. 결과는 `{ main, thread }` 구조 — 메인은 헤더 / WoW 요약 / 대시보드 링크만, 스레드 댓글에 Worst·Top Mobile/Desktop Problems·AI TL;DR·Top URL Actions·담당자 멘션 전부 노출
+- `send-slack.js`: payload 를 실제 Slack 에 전송. `SLACK_BOT_TOKEN` + `SLACK_CHANNEL_ID` 가 있으면 `chat.postMessage` 로 메인 + 스레드 분리 발송, 없으면 `SLACK_WEBHOOK_URL` 로 메인만 fallback
+- `owners.json`: host → Slack 사용자/그룹 ID 매핑 (`U...` 개인 / `S...` 사용자 그룹). 스레드 댓글의 담당자 멘션에 사용. 매핑 누락 시 `_default` 키로 대체
 - `applied-actions.md`: 매주 적용한 개선 액션을 한 줄씩 기록 (사용자 작성). AI 제안의 신선도 유지 및 효과 검증 유도
 - `history/*.json`: 실행별 스냅샷 아카이브
 
@@ -44,7 +46,9 @@ Job 구성:
 ## 필요한 GitHub Secrets
 
 - `OPENAI_API_KEY`: OpenAI API 호출용
-- `SLACK_WEBHOOK_URL`: Slack Webhook URL
+- `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token (`xoxb-...`). 스레드 분리 발송에 필수. Slack App 의 Bot Token Scope 에 `chat:write` 권한이 있어야 함
+- `SLACK_CHANNEL_ID`: 메시지를 발송할 Slack 채널 ID (`C0XXXXXXXX`). 채널에 봇이 초대돼 있어야 함
+- (선택) `SLACK_WEBHOOK_URL`: BOT_TOKEN / CHANNEL_ID 미설정 시의 fallback. 이 모드는 스레드 분리 불가
 - (선택) `GITHUB_TOKEN`: 기본 제공 토큰 사용 가능, 별도 설정 불필요
 
 ## 주요 산출물

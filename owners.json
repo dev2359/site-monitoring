@@ -1,0 +1,23 @@
+{
+  "wellit.co.kr":       ["U0AMNTM02RX"],
+  "pronutrition.co.kr": ["U046XQQGXTM"],
+  "themedion.com":      ["U046XQQGXTM"],
+  "curicell.kr":        ["U0AMNTM02RX"],
+  "m.curicell.kr":      ["U0AMNTM02RX"],
+  "celladix.co.kr":     ["U06L8MRMY4S"],
+  "bifigen.com":        ["U06L8MRMY4S"],
+  "housweet.co.kr":     ["U0AMNTM02RX"],
+  "housweet.kr":        ["U0AMNTM02RX"],
+  "cleanery.co.kr":     ["U06L8MRMY4S"],
+  "m.cleanery.co.kr":   ["U06L8MRMY4S"],
+  "hedn.kr":            ["U046XQQGXTM"],
+
+  "lactomedi.com":      ["S0A7CNEQ9CL"],
+  "lactomedi.sg":       ["S0A7CNEQ9CL"],
+  "lactomedi.jp":       ["S0A7CNEQ9CL"],
+  "celladix.us":        ["S0A7CNEQ9CL"],
+  "celladix.sg":        ["S0A7CNEQ9CL"],
+  "celladix.jp":        ["S0A7CNEQ9CL"],
+
+  "_default":           ["S0A7CNEQ9CL"]
+}

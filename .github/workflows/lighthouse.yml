@@ -225,13 +225,15 @@ jobs:
             echo "should_notify=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Send Slack message (webhook)
+      - name: Send Slack message (bot/thread → fallback webhook)
         if: steps.decide.outputs.should_notify == 'true'
         run: |
           echo "Sending Slack message (status=${{ steps.decide.outputs.status }})"
-          curl -X POST -H 'Content-type: application/json' \
-            --data @results/slack-payload.json \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+          node send-slack.js
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Upload Summary + AI + Slack payload
         uses: actions/upload-artifact@v4

@@ -11,10 +11,14 @@ const path = require("path");
 
 const SUMMARY_PATH = path.join("results", "summary.json");
 const AI_MD_PATH = path.join("results", "ai-suggestions.md");
+const WOW_CSV_PATH = path.join("results", "compare-wow.csv");
+const OWNERS_PATH = "owners.json";
 const OUT_PATH = path.join("results", "slack-payload.json");
 
 const TOP_N_PER_DEVICE = 3; // 출력 개수
 const DEFAULT_THRESHOLDS = { warn: 0.8, crit: 0.6 }; // Perf 기준
+const REGRESSION_DELTA = -10; // WoW 회귀 기준
+const IMPROVEMENT_DELTA = 10; // WoW 개선 기준
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -184,6 +188,86 @@ function shortenUrl(u) {
   }
 }
 
+// WoW CSV 의 perf_delta 컬럼을 스캔해 회귀(<=-10) / 개선(>=+10) 개수를 센다.
+function readWowCounts(csvPath) {
+  if (!fs.existsSync(csvPath)) return null;
+  const lines = fs.readFileSync(csvPath, "utf-8").split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return { regressions: 0, improvements: 0 };
+
+  const header = lines[0].split(",");
+  const idx = header.indexOf("perf_delta");
+  if (idx === -1) return { regressions: 0, improvements: 0 };
+
+  let regressions = 0;
+  let improvements = 0;
+  for (let i = 1; i < lines.length; i++) {
+    // 단순 split: trend 컬럼에 콤마가 없는 unicode bar 라 안전.
+    const cols = lines[i].split(",");
+    const raw = (cols[idx] || "").trim();
+    if (!raw) continue;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) continue;
+    if (v <= REGRESSION_DELTA) regressions++;
+    else if (v >= IMPROVEMENT_DELTA) improvements++;
+  }
+  return { regressions, improvements };
+}
+
+// Slack 멘션 토큰 (U... 개인 / S... 사용자 그룹).
+function formatMention(id) {
+  if (typeof id !== "string") return "";
+  if (id.startsWith("S")) return `<!subteam^${id}>`;
+  if (id.startsWith("U") || id.startsWith("W")) return `<@${id}>`;
+  return id;
+}
+
+function readOwners(p) {
+  if (!fs.existsSync(p)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf-8"));
+  } catch (e) {
+    console.warn(`⚠️ owners.json 파싱 실패:`, e?.message || e);
+    return null;
+  }
+}
+
+// 이번 회차 problems 의 host 집합 → owners.json 매핑으로 멘션 라인 생성.
+// 매핑 없는 host 는 _default 백업으로 묶음.
+function buildOwnerLines(problems, owners) {
+  if (!owners) return [];
+
+  const hosts = new Set();
+  for (const p of problems || []) {
+    try {
+      hosts.add(new URL(p.url).host);
+    } catch {}
+  }
+  if (hosts.size === 0) return [];
+
+  // 멘션 집합이 같은 host 들은 한 줄로 묶어 시각적 노이즈를 줄임.
+  const byMention = new Map();
+  const fallbackKey = "__default__";
+  for (const host of [...hosts].sort()) {
+    let ids = owners[host];
+    let usedFallback = false;
+    if (!ids || ids.length === 0) {
+      ids = owners._default;
+      usedFallback = true;
+    }
+    if (!ids || ids.length === 0) continue;
+
+    const key = usedFallback ? fallbackKey : ids.slice().sort().join("|");
+    if (!byMention.has(key)) byMention.set(key, { ids, hosts: [], fallback: usedFallback });
+    byMention.get(key).hosts.push(host);
+  }
+
+  return [...byMention.values()].map(({ ids, hosts, fallback }) => {
+    const mentions = ids.map(formatMention).filter(Boolean).join(" ");
+    const tag = fallback ? " _(default)_" : "";
+    return `• ${hosts.join(", ")}${tag} — ${mentions}`;
+  });
+}
+
 function buildProblemLines(problems, warn01, crit01, limit) {
   const sorted = problems
     .slice()
@@ -295,20 +379,18 @@ function main() {
           .join("\n\n")}`
       : null;
 
-  // Slack blocks
-  const blocks = [
-    { type: "header", text: { type: "plain_text", text: headerText } },
+  // WoW 카운트 (compare-wow.csv 가 있을 때만)
+  const wow = readWowCounts(WOW_CSV_PATH);
+  const wowLine = wow
+    ? `*WoW:* 회귀 ${wow.regressions}건 / 개선 ${wow.improvements}건 _(perf Δ ±${IMPROVEMENT_DELTA} 기준)_`
+    : null;
 
-    { type: "section", text: { type: "mrkdwn", text: `*📱 Top Mobile Problems*\n${topMobileLines.join("\n")}` } },
-    { type: "section", text: { type: "mrkdwn", text: `*🖥️ Top Desktop Problems*\n${topDesktopLines.join("\n")}` } },
-  ];
-
-  if (aiTldrBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
-  if (topUrlsBlock) blocks.push({ type: "section", text: { type: "mrkdwn", text: topUrlsBlock } });
+  // Owner 멘션 라인 (이번 회차 problems 의 host 기준)
+  const owners = readOwners(OWNERS_PATH);
+  const ownerLines = buildOwnerLines(problems, owners);
 
   const runUrl = process.env.GITHUB_RUN_URL;
-  
-  blocks.push({
+  const dashboardCtx = {
     type: "context",
     elements: [
       {
@@ -318,17 +400,65 @@ function main() {
           : "📊 전체 URL 점수(표) 보러가기",
       },
     ],
+  };
+
+  // ===== MAIN (채널 노출, 컴팩트) =====
+  const mainBlocks = [
+    { type: "header", text: { type: "plain_text", text: headerText } },
+  ];
+  if (wowLine) {
+    mainBlocks.push({ type: "section", text: { type: "mrkdwn", text: wowLine } });
+  }
+  mainBlocks.push(dashboardCtx);
+
+  const mainText = wow
+    ? `${headerText} | WoW 회귀 ${wow.regressions} / 개선 ${wow.improvements}`
+    : `${headerText}`;
+
+  // ===== THREAD (펼침, 상세 전부) =====
+  const threadBlocks = [];
+  threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: worstLine } });
+  threadBlocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: `*📱 Top Mobile Problems*\n${topMobileLines.join("\n")}` },
   });
-  
+  threadBlocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: `*🖥️ Top Desktop Problems*\n${topDesktopLines.join("\n")}` },
+  });
+  if (aiTldrBlock) {
+    threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: aiTldrBlock } });
+  }
+  if (topUrlsBlock) {
+    threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: topUrlsBlock } });
+  }
+  if (ownerLines.length > 0) {
+    threadBlocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*👥 담당자 멘션*\n${ownerLines.join("\n")}` },
+    });
+  }
+
+  const threadText = `Lighthouse 상세 (${date}) - Problems(P<${warnCut}): ${problems.length}`;
+
   const payload = {
-    text: `${headerText}\n${worstLine}\nProblems(P<${warnCut}): ${problems.length}`,
-    blocks,
+    main: {
+      text: mainText,
+      blocks: mainBlocks,
+    },
+    thread: {
+      text: threadText,
+      blocks: threadBlocks,
+    },
   };
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf-8");
 
   console.log(`✅ Slack payload written: ${OUT_PATH}`);
+  console.log(`   main blocks: ${mainBlocks.length}, thread blocks: ${threadBlocks.length}`);
+  if (wow) console.log(`   WoW: regressions=${wow.regressions}, improvements=${wow.improvements}`);
+  if (ownerLines.length) console.log(`   Owner mention lines: ${ownerLines.length}`);
 }
 
 main();
