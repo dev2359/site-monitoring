@@ -16,7 +16,7 @@ const OUT_PATH = path.join("results", "ai-suggestions.md");
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const MAX_OUTPUT_TOKENS = Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 2500);
+const MAX_OUTPUT_TOKENS = Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 6000);
 
 function mustReadJson(p) {
   return JSON.parse(fs.readFileSync(p, "utf-8"));
