@@ -5,32 +5,55 @@
 ## 개요
 
 - Desktop / Mobile을 분리 측정
-- URL별 다회 측정(run) 후 집계
+- URL별 다회 측정(run) 후 집계 (trimmed mean)
 - 결과를 `results/summary.json`으로 통합
 - 히스토리 스냅샷(`history/*.json`) 누적
-- 3개월 비교 테이블 생성
-- OpenAI 기반 요약/인사이트 생성
-- Slack Webhook 알림 전송
+- 3개월 비교 테이블 + WoW(주간) 비교 + 회귀 보고서 생성
+- OpenAI 기반 사이트별/URL별 개선 액션 자동 제안 (이미 적용한 액션은 효과 검증으로 전환)
+- Slack 채널에 메인 + 스레드 분리 발송, 호스트별 담당자 자동 멘션
+- Slack Message Shortcut 으로 "적용한 액션"을 GitHub 에 자동 커밋 → 다음 실행부터 재제안 방지
 
 ## 저장소 구조
 
-- `.github/workflows/lighthouse.yml`: 전체 실행 워크플로
+### 워크플로
+
+- `.github/workflows/lighthouse.yml`: 전체 실행 워크플로 (스케줄 + 수동)
+- `.github/workflows/slack-test-send.yml`: Lighthouse 측정을 **스킵**하고 마지막 history 스냅샷으로 Slack 메시지만 재발송 — 리포트 포맷 검증용
+- `.github/workflows/slack-delete.yml`: ts 입력받아 봇이 보낸 Slack 메시지 삭제 (메인/스레드 여러 ts 콤마 구분 가능)
+
+### 측정 / 집계
+
 - `lighthouserc.js`: Desktop LHCI 설정
 - `lighthouserc_mobile.js`: Mobile LHCI 설정
-- `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성
+- `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성. `module.exports = { buildAiInput, buildSummary }` 로 재사용 가능
+- `regenerate-ai-input.js`: `results/summary.json` 에서 `results/ai-input.json` 만 다시 생성하는 헬퍼 (`slack-test-send.yml` 이 사용)
 - `build-3m-table.js`: 현재 vs 과거 비교 표/CSV 생성. `PAST_DAYS`/`OUT_MD`/`OUT_CSV`/`COMPARE_TITLE`/`COMPARE_LABEL` 환경변수로 윈도 변경 가능 (3개월 + WoW 두 번 호출). 표에 per-URL 8주 sparkline trend 컬럼 포함. baseline floor: `2026-04-22`
 - `build-regressions.js`: WoW 비교 CSV 에서 perf Δ ≤ -10 인 URL 만 추출해 회귀 보고서 생성 (Job Summary 전용)
+
+### AI 분석
+
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
-- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 *최근 `APPLIED_WINDOW_WEEKS` 주(기본 12주)* 분량만 프롬프트에 주입 → 그 윈도 안의 액션은 재제안 대신 현재 metric 으로 *효과 검증* 코멘트로 전환 (✅ 효과 보임 / ⚠️ 적용 기록은 있으나 metric 미개선 → 롤백 가능성 확인). Slack 에는 Top 3 URL 액션, GitHub Job Summary 에는 전 섹션 노출
-- `build-slack-payload.js`: Slack 메시지 payload 생성. 결과는 `{ main, thread }` 구조 — 메인은 헤더 / WoW 요약 / 대시보드 링크만, 스레드 댓글에 Worst·Top Mobile/Desktop Problems·AI TL;DR·Top URL Actions·담당자 멘션 전부 노출
-- `send-slack.js`: payload 를 실제 Slack 에 전송. `SLACK_BOT_TOKEN` + `SLACK_CHANNEL_ID` 가 있으면 `chat.postMessage` 로 메인 + 스레드 분리 발송, 없으면 `SLACK_WEBHOOK_URL` 로 메인만 fallback
-- `owners.json`: host → Slack 사용자/그룹 ID 매핑 (`U...` 개인 / `S...` 사용자 그룹). 스레드 댓글의 담당자 멘션에 사용. 매핑 누락 시 `_default` 키로 대체
-- `applied-actions.md`: 매주 적용한 개선 액션을 한 줄씩 기록 (사용자 작성). AI 제안의 신선도 유지 및 효과 검증 유도
-- `history/*.json`: 실행별 스냅샷 아카이브
+- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 *최근 `APPLIED_WINDOW_WEEKS` 주(기본 12주)* 분량만 프롬프트에 주입 → 그 윈도 안의 액션은 재제안 대신 현재 metric 으로 *효과 검증* 코멘트로 전환 (✅ 효과 보임 / ⚠️ 적용 기록은 있으나 metric 미개선 → 롤백 가능성 확인). Slack 에는 Top 6 URL(모바일 3 + 데스크탑 3) 액션, GitHub Job Summary 에는 전 섹션 노출
+
+### Slack 발송 / 삭제
+
+- `build-slack-payload.js`: Slack 메시지 payload 생성. 결과는 `{ main, thread }` 구조 — 메인은 헤더 / WoW 요약 / 대시보드 링크만, 스레드 댓글엔 Top Mobile/Desktop Problems · AI TL;DR · URL별 Best Action · 담당자 멘션을 각각 별도 section block 으로 분할 (Slack "자세히 보기" 토글 회피)
+- `send-slack.js`: payload 를 실제 Slack 에 전송. `SLACK_BOT_TOKEN` + `SLACK_CHANNEL_ID` 가 있으면 `chat.postMessage` 로 메인 + 스레드 분리 발송 후 ts 출력(삭제용), 없으면 `SLACK_WEBHOOK_URL` 로 메인만 fallback. `unfurl_links: false, unfurl_media: false` 로 링크 미리보기 비활성화
+- `delete-slack-message.js`: `chat.delete` API 로 봇 메시지 삭제. `DELETE_TS` 환경변수에 콤마/공백 구분 다중 ts 지원
+
+### 담당자 매핑 / 적용 액션
+
+- `owners.json`: host → Slack 사용자/그룹 ID 매핑 (`U...` 개인 / `S...` 사용자 그룹). 스레드 댓글의 담당자 멘션에 사용. 매핑 누락 시 `_default` 키로 대체. 멘션 대상은 Slack 에 노출되는 Top 6 URL 의 호스트로 한정
+- `applied-actions.md`: 매주 적용한 개선 액션을 한 줄씩 기록. **두 가지 경로**로 갱신됨 — (a) 사용자가 직접 PR/커밋, (b) Slack `/applied-action` 슬래시 커맨드 또는 Message Shortcut → `slack-applied-action/` 서비스 → GitHub Contents API 로 자동 커밋. AI 제안의 신선도 유지 + 효과 검증 유도
+- `slack-applied-action/`: Slack `/applied-action` 슬래시 커맨드 + Message Shortcut("Applied Action 기록") 핸들러. **Railway 별도 서비스로 배포**. 상세는 [slack-applied-action/README.md](slack-applied-action/README.md)
+
+### 데이터
+
+- `history/*.json`: 실행별 스냅샷 아카이브 (워크플로가 자동 커밋)
 
 ## 실행 방식
 
-### GitHub Actions
+### GitHub Actions — 주간 측정
 
 워크플로: `.github/workflows/lighthouse.yml`
 
@@ -39,17 +62,45 @@
 
 Job 구성:
 
-1. `lighthouse_desktop`
-2. `lighthouse_mobile`
-3. `summarize_and_notify` (위 2개 완료 후 실행)
+1. `lighthouse_desktop` — Desktop LHCI 측정
+2. `lighthouse_mobile` — Mobile LHCI 측정
+3. `summarize_and_notify` (위 2개 완료 후 실행) — 요약 / 3개월 비교 / WoW 비교 / 회귀 보고서 / AI 분석 + 제안 / Slack 발송 / history 커밋
+
+### GitHub Actions — 운영 유틸
+
+- `slack-test-send.yml` (`workflow_dispatch`): 마지막 history 스냅샷 → `results/summary.json` 시드 → `regenerate-ai-input.js` → 비교/회귀/AI/페이로드 → Slack 발송. **Lighthouse 측정을 안 거치므로 1~2분 안에 끝남**. 리포트 포맷 검증/리허설용
+- `slack-delete.yml` (`workflow_dispatch`): 입력받은 ts 의 봇 메시지를 삭제. 콤마/공백으로 메인 ts + thread ts 등 다중 입력 가능. ts 는 `slack-test-send.yml` 실행 로그의 `main posted (ts=...)` / `thread reply posted (ts=...)` 라인에서 확인
+
+### Railway — `slack-applied-action/` 서비스
+
+`/applied-action` 슬래시 커맨드 + Message Shortcut("Applied Action 기록") 을 처리. 사용자가 Slack 에서 적용한 액션을 입력하면 GitHub Contents API 로 `applied-actions.md` 에 자동 커밋. 다음 주간 실행부터 AI 가 그 액션을 재제안하지 않고 효과 검증으로 전환.
+
+상세 설정 (환경변수, 배포 방법) 은 [slack-applied-action/README.md](slack-applied-action/README.md) 참고.
 
 ## 필요한 GitHub Secrets
 
 - `OPENAI_API_KEY`: OpenAI API 호출용
-- `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token (`xoxb-...`). 스레드 분리 발송에 필수. Slack App 의 Bot Token Scope 에 `chat:write` 권한이 있어야 함
-- `SLACK_CHANNEL_ID`: 메시지를 발송할 Slack 채널 ID (`C0XXXXXXXX`). 채널에 봇이 초대돼 있어야 함
-- (선택) `SLACK_WEBHOOK_URL`: BOT_TOKEN / CHANNEL_ID 미설정 시의 fallback. 이 모드는 스레드 분리 불가
-- (선택) `GITHUB_TOKEN`: 기본 제공 토큰 사용 가능, 별도 설정 불필요
+- `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token (`xoxb-...`). 스레드 분리 발송 및 봇 메시지 삭제에 필수. Bot Token Scope 에 `chat:write` 권한 필요
+- `SLACK_CHANNEL_ID`: 메시지를 발송할 Slack 채널 ID (`C0XXXXXXXX`). 채널에 봇이 초대돼 있어야 함 (`/invite @앱이름`)
+- (선택) `SLACK_WEBHOOK_URL`: `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID` 미설정 시의 fallback. 이 모드는 스레드 분리 불가
+- `GITHUB_TOKEN`: 기본 제공 토큰 사용, 별도 설정 불필요 (history 자동 커밋용)
+
+### Railway (`slack-applied-action`) 서비스 환경변수
+
+`slack-applied-action/` 디렉터리 Root 로 배포한 서비스에 등록.
+
+- `SLACK_SIGNING_SECRET`: Slack App **Basic Information → Signing Secret** (요청 서명 검증)
+- `SLACK_BOT_TOKEN`: 위와 동일 (스레드에 결과 게시 + Modal 열기)
+- `GITHUB_TOKEN`: Fine-grained PAT (Contents: Read & Write 만, 본 레포 한정 권장)
+- (선택) `GITHUB_REPO` / `GITHUB_FILE_PATH` / `GITHUB_BRANCH` / `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`: 기본값 사용 시 생략
+
+### Slack App 설정 요약
+
+- **Bot Token Scopes**: `chat:write`, `commands`
+- **Slash Commands**: `/applied-action` → Request URL: Railway 서비스의 `POST /applied-action`
+- **Interactivity & Shortcuts**:
+  - Interactivity Request URL: Railway 서비스의 `POST /slack/interactivity`
+  - Message Shortcut: Name "Applied Action 기록", Callback ID `record_applied_action` — 메시지 ⋯ 메뉴에서 실행. 스레드 안에서도 가능 (슬래시 커맨드는 Slack 정책상 스레드 불가 → Shortcut 필수)
 
 ## 주요 산출물
 
@@ -57,12 +108,13 @@ Job 구성:
 
 - `results/summary.json`: 통합 요약 원본
 - `results/summary.md`: 요약 Markdown
-- `results/compare-3m-all.md`: 3개월 비교 테이블
-- `results/compare-3m-all.csv`: 3개월 비교 CSV
+- `results/compare-3m-all.md` / `.csv`: 3개월 비교 (sparkline trend 포함)
+- `results/compare-wow.md` / `.csv`: 주간(WoW) 비교
+- `results/regressions-wow.md`: WoW 회귀 보고서 (perf Δ ≤ -10 만 — Job Summary 전용)
 - `results/compare-3m-ai.md`: 3개월 AI 인사이트
 - `results/ai-input.json`: AI 입력 데이터
-- `results/ai-suggestions.md`: AI 제안 결과
-- `results/slack-payload.json`: Slack 전송 payload
+- `results/ai-suggestions.md`: AI 제안 결과 (TL;DR / Per-site / Top URL Actions / Cross-cutting)
+- `results/slack-payload.json`: Slack 전송 payload (`{ main, thread }` 구조)
 
 그리고 워크플로에서 `history/<timestamp>.json`으로 스냅샷을 커밋/푸시합니다.
 
@@ -114,12 +166,22 @@ lhci autorun --config=lighthouserc.js
 lhci autorun --config=lighthouserc_mobile.js
 node extract-scores.js
 node build-3m-table.js
+# WoW 비교 (별도 환경변수)
+PAST_DAYS=7 OUT_MD=results/compare-wow.md OUT_CSV=results/compare-wow.csv \
+  COMPARE_TITLE="Week-over-Week Comparison" COMPARE_LABEL="Past (~7d ago)" \
+  node build-3m-table.js
+node build-regressions.js
 node generate-3m-ai-analysis.js
 node generate-ai-suggestions.js
 node build-slack-payload.js
+node send-slack.js     # 실제 발송 (SLACK_BOT_TOKEN/CHANNEL_ID 필요)
 ```
 
 `generate-*` 스크립트는 `OPENAI_API_KEY` 환경변수가 필요합니다.
+
+### Slack 메시지 포맷만 검증 (Lighthouse 스킵)
+
+리포트 포맷 변경을 검증하고 싶을 때는 GitHub UI 에서 **Actions → Slack Test Send (skip measurements) → Run workflow** 실행 (1~2분 소요). 발송 결과의 ts 가 로그에 출력되므로, 잘못 보낸 경우 **Slack Delete Message** 워크플로에 그 ts 를 입력해 삭제할 수 있습니다.
 
 ## 트러블슈팅
 
@@ -152,4 +214,9 @@ node build-slack-payload.js
 - Slack 알림 노이즈가 많으면:
   - `warn`/`crit` 임계값 재조정
   - invalid 보고서와 분리 알림
+- **적용한 액션을 빠짐없이 기록**해야 AI 제안 품질이 유지됩니다.
+  - 스레드 안에서는 슬래시 커맨드가 막혀 있으므로, 메시지 ⋯ 메뉴 → **"Applied Action 기록"** Shortcut 사용
+  - 메인 채널에서는 `/applied-action <host> <내용>` 슬래시 커맨드 사용 가능
+  - 두 경로 모두 `applied-actions.md` 에 자동 커밋 → 다음 주간 실행부터 같은 액션 재제안 차단 + 효과 검증으로 전환
+- 담당자가 바뀌면 `owners.json` 의 host → Slack ID 매핑을 업데이트하세요. `_default` 가 fallback 입니다.
 
