@@ -21,7 +21,7 @@
 - `build-3m-table.js`: 현재 vs 과거 비교 표/CSV 생성. `PAST_DAYS`/`OUT_MD`/`OUT_CSV`/`COMPARE_TITLE`/`COMPARE_LABEL` 환경변수로 윈도 변경 가능 (3개월 + WoW 두 번 호출). 표에 per-URL 8주 sparkline trend 컬럼 포함. baseline floor: `2026-04-22`
 - `build-regressions.js`: WoW 비교 CSV 에서 perf Δ ≤ -10 인 URL 만 추출해 회귀 보고서 생성 (Job Summary 전용)
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
-- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 프롬프트에 주입되어 이미 적용한 액션은 재제안하지 않음. Slack 에는 Top 3 URL 액션, GitHub Job Summary 에는 전 섹션 노출
+- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 *최근 `APPLIED_WINDOW_WEEKS` 주(기본 12주)* 분량만 프롬프트에 주입 → 그 윈도 안의 액션은 재제안 대신 현재 metric 으로 *효과 검증* 코멘트로 전환 (✅ 효과 보임 / ⚠️ 적용 기록은 있으나 metric 미개선 → 롤백 가능성 확인). Slack 에는 Top 3 URL 액션, GitHub Job Summary 에는 전 섹션 노출
 - `build-slack-payload.js`: Slack 메시지 payload 생성. 결과는 `{ main, thread }` 구조 — 메인은 헤더 / WoW 요약 / 대시보드 링크만, 스레드 댓글에 Worst·Top Mobile/Desktop Problems·AI TL;DR·Top URL Actions·담당자 멘션 전부 노출
 - `send-slack.js`: payload 를 실제 Slack 에 전송. `SLACK_BOT_TOKEN` + `SLACK_CHANNEL_ID` 가 있으면 `chat.postMessage` 로 메인 + 스레드 분리 발송, 없으면 `SLACK_WEBHOOK_URL` 로 메인만 fallback
 - `owners.json`: host → Slack 사용자/그룹 ID 매핑 (`U...` 개인 / `S...` 사용자 그룹). 스레드 댓글의 담당자 멘션에 사용. 매핑 누락 시 `_default` 키로 대체

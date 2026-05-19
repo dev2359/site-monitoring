@@ -19,8 +19,46 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const MAX_OUTPUT_TOKENS = Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 6000);
 
+// applied-actions.md 에서 최근 N 주 분량만 AI 에 전달. 이 윈도 이전 기록은 자동 제외되어
+// 시간이 지나면 자연스럽게 재제안 가능 (롤백/리팩토링으로 원상복귀된 경우 대비).
+const APPLIED_WINDOW_WEEKS = parseInt(process.env.APPLIED_WINDOW_WEEKS || "12", 10);
+
 function mustReadJson(p) {
   return JSON.parse(fs.readFileSync(p, "utf-8"));
+}
+
+// applied-actions.md 에서 `- [YYYY-MM-DD] ...` 형식 항목만 추출하고
+// 최근 windowDays 일 이내 것만 남긴다. 헤더/설명/코드블록(```) 안 예시는 모두 제외.
+function filterRecentAppliedActions(md, windowDays) {
+  if (!md) return { kept: [], totalEntries: 0, droppedOld: 0 };
+  const lines = md.split(/\r?\n/);
+  const datePattern = /^\s*-\s*\[(\d{4})-(\d{2})-(\d{2})\]\s*(.*)$/;
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+  const kept = [];
+  let totalEntries = 0;
+  let droppedOld = 0;
+  let inCodeBlock = false;
+
+  for (const line of lines) {
+    // ``` 만나면 코드블록 진입/탈출 — 코드블록 안의 라인은 예시로 간주.
+    if (/^```/.test(line.trim())) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+
+    const m = line.match(datePattern);
+    if (!m) continue;
+    totalEntries++;
+    const d = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (d >= cutoff) {
+      kept.push(line.trim());
+    } else {
+      droppedOld++;
+    }
+  }
+  return { kept, totalEntries, droppedOld };
 }
 
 function writeText(p, text) {
@@ -28,20 +66,23 @@ function writeText(p, text) {
   fs.writeFileSync(p, text, "utf-8");
 }
 
-function buildPrompt(input, appliedActions) {
+function buildPrompt(input, appliedFiltered) {
   const warn = Math.round((input.thresholds?.warn ?? 0.8) * 100);
   const crit = Math.round((input.thresholds?.crit ?? 0.6) * 100);
 
-  const appliedBlock = appliedActions && appliedActions.trim()
+  const appliedBlock = appliedFiltered && appliedFiltered.kept.length > 0
     ? `
 
-이미 적용된 액션 목록 (다시 같은 액션을 제안하지 말 것):
+지난 ${APPLIED_WINDOW_WEEKS}주 (약 ${APPLIED_WINDOW_WEEKS * 7}일) 동안 적용된 액션 (각 줄: \`- [YYYY-MM-DD] [host] 내용\`):
 \`\`\`
-${appliedActions.trim()}
+${appliedFiltered.kept.join("\n")}
 \`\`\`
-규칙:
-- 위에 적힌 액션과 동일/유사한 작업은 새 "개선 액션" 으로 제안하지 말 것.
-- 해당 액션이 적용된 host/URL 의 metric 변화가 보이면 "Per-site Diagnosis" 의 '원인 가설' 또는 'Cross-cutting Recommendations' 에서 한 줄로 "이전 적용한 X 가 Y metric 에 어떤 영향을 줬는지" 검증 코멘트를 남길 것.
+검증 규칙(반드시 지킬 것):
+1. 위 목록에 있는 액션과 *동일/유사* 한 작업은 "개선 액션" 또는 "Top URL Actions" 의 새 액션으로 **제안하지 말 것**. 대신 현재 metric 으로 *효과 검증* 만 수행.
+2. 효과 검증은 아래 둘 중 하나로 분류:
+   - **효과 보임**: 해당 host/URL 의 현재 LCP/CLS/TBT 가 액션 기록 이전 측정 대비 개선됨 → 해당 host 의 "Per-site Diagnosis" → '원인 가설' 또는 '개선 액션' 마지막 줄에 \`✅ [YYYY-MM-DD 적용한 X] 가 Y metric 을 Z 만큼 개선시킨 것으로 보임\` 한 줄 추가.
+   - **효과 불명/악화**: 액션 기록은 있지만 현재 metric 이 여전히 나쁘거나 더 악화 → 해당 host 의 '개선 액션' 또는 'Cross-cutting Recommendations' 에 \`⚠️ [YYYY-MM-DD 적용한 X] 기록 있으나 현재 Y metric 이 여전히 N — 적용 상태 검증 / 롤백 가능성 확인 권장\` 한 줄 추가.
+3. ${APPLIED_WINDOW_WEEKS}주 이전 기록은 이 목록에서 제외됨 — 그 시점에 적용한 액션이라도 다시 제안 가능 (롤백/시간 경과에 따른 재제안 허용).
 `
     : "";
 
@@ -180,17 +221,21 @@ async function main() {
     byHost: input.byHost,
   };
 
-  let appliedActions = null;
+  let appliedFiltered = null;
   if (fs.existsSync(APPLIED_PATH)) {
     try {
-      appliedActions = fs.readFileSync(APPLIED_PATH, "utf-8");
-      console.log(`ℹ️ Loaded applied-actions from ${APPLIED_PATH} (${appliedActions.length} chars)`);
+      const md = fs.readFileSync(APPLIED_PATH, "utf-8");
+      const windowDays = APPLIED_WINDOW_WEEKS * 7;
+      appliedFiltered = filterRecentAppliedActions(md, windowDays);
+      console.log(
+        `ℹ️ applied-actions: total=${appliedFiltered.totalEntries}, kept(last ${APPLIED_WINDOW_WEEKS}w)=${appliedFiltered.kept.length}, droppedOld=${appliedFiltered.droppedOld}`
+      );
     } catch (e) {
       console.warn(`⚠️ Failed to read ${APPLIED_PATH}:`, e?.message || e);
     }
   }
 
-  const prompt = buildPrompt(slim, appliedActions);
+  const prompt = buildPrompt(slim, appliedFiltered);
 
   try {
     const md = await callOpenAI(prompt);
