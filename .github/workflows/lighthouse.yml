@@ -131,6 +131,28 @@ jobs:
         run: |
           cat results/compare-3m-all.md >> $GITHUB_STEP_SUMMARY
 
+      - name: Build Week-over-Week comparison table
+        run: node build-3m-table.js
+        env:
+          PAST_DAYS: "7"
+          OUT_MD: "results/compare-wow.md"
+          OUT_CSV: "results/compare-wow.csv"
+          COMPARE_TITLE: "Week-over-Week Comparison (All URLs)"
+          COMPARE_LABEL: "Past (~7d ago, latest-per-day)"
+
+      - name: Publish Week-over-Week comparison to Job Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat results/compare-wow.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Build WoW regressions (perf Δ ≤ -10)
+        run: node build-regressions.js
+
+      - name: Publish regressions to Job Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat results/regressions-wow.md >> $GITHUB_STEP_SUMMARY
+
       - name: Generate 3M AI analysis
         run: node generate-3m-ai-analysis.js
         env:
@@ -148,14 +170,17 @@ jobs:
             echo "_(No 3-month AI analysis yet. File not generated.)_" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload 3-month comparison table files
+      - name: Upload comparison & regression artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lighthouse-3m-compare
+          name: lighthouse-compare
           path: |
             results/compare-3m-all.md
             results/compare-3m-all.csv
             results/compare-3m-ai.md
+            results/compare-wow.md
+            results/compare-wow.csv
+            results/regressions-wow.md
           if-no-files-found: warn
 
       - name: Build AI input (optional)

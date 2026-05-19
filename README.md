@@ -18,10 +18,12 @@
 - `lighthouserc.js`: Desktop LHCI 설정
 - `lighthouserc_mobile.js`: Mobile LHCI 설정
 - `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성
-- `build-3m-table.js`: 현재 vs 3개월 전 비교 표/CSV 생성 (baseline floor: `2026-04-22` — 측정 환경/URL 셋이 안정된 이후 스냅샷만 비교 대상)
+- `build-3m-table.js`: 현재 vs 과거 비교 표/CSV 생성. `PAST_DAYS`/`OUT_MD`/`OUT_CSV`/`COMPARE_TITLE`/`COMPARE_LABEL` 환경변수로 윈도 변경 가능 (3개월 + WoW 두 번 호출). 표에 per-URL 8주 sparkline trend 컬럼 포함. baseline floor: `2026-04-22`
+- `build-regressions.js`: WoW 비교 CSV 에서 perf Δ ≤ -10 인 URL 만 추출해 회귀 보고서 생성 (Job Summary 전용)
 - `generate-3m-ai-analysis.js`: 3개월 추이 AI 분석
-- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). Slack 에는 Top 3 URL 액션이, GitHub Job Summary 에는 전 섹션이 노출됨
+- `generate-ai-suggestions.js`: 이번 실행 결과 기반 AI 제안 (TL;DR + Per-site Diagnosis + Top URL Actions + Cross-cutting 4섹션 구조). 레포 루트 `applied-actions.md` 가 있으면 프롬프트에 주입되어 이미 적용한 액션은 재제안하지 않음. Slack 에는 Top 3 URL 액션, GitHub Job Summary 에는 전 섹션 노출
 - `build-slack-payload.js`: Slack 메시지 payload 생성
+- `applied-actions.md`: 매주 적용한 개선 액션을 한 줄씩 기록 (사용자 작성). AI 제안의 신선도 유지 및 효과 검증 유도
 - `history/*.json`: 실행별 스냅샷 아카이브
 
 ## 실행 방식

@@ -19,14 +19,22 @@ const path = require("path");
 
 const HISTORY_DIR = "history";
 const NOW_PATH = path.join("results", "summary.json");
-const OUT_MD = path.join("results", "compare-3m-all.md");
-const OUT_CSV = path.join("results", "compare-3m-all.csv");
 
-const PAST_DAYS = 90;
+// 환경변수로 비교 윈도/출력 경로/제목 모두 오버라이드 가능. 동일 스크립트로 3개월 비교와
+// 주간(WoW) 비교를 모두 생성하기 위한 설계.
+const PAST_DAYS = parseInt(process.env.PAST_DAYS || "90", 10);
+const OUT_MD = process.env.OUT_MD || path.join("results", "compare-3m-all.md");
+const OUT_CSV = process.env.OUT_CSV || path.join("results", "compare-3m-all.csv");
+const COMPARE_TITLE = process.env.COMPARE_TITLE || "3 Month Comparison (All URLs)";
+const COMPARE_LABEL =
+  process.env.COMPARE_LABEL || `Past (nearest to ~${PAST_DAYS}d ago, latest-per-day)`;
 
 // baseline floor: 측정 환경/URL 셋이 안정화되기 전 스냅샷은 비교 대상에서 제외.
-// 이력이 90일 이상 쌓이면 자연스럽게 이 값보다 늦은 스냅샷이 선택된다.
-const EARLIEST_BASELINE_DATE = "2026-04-22";
+// 이력이 충분히 쌓이면 자연스럽게 이 값보다 늦은 스냅샷이 선택된다.
+const EARLIEST_BASELINE_DATE = process.env.EARLIEST_BASELINE_DATE || "2026-04-22";
+
+// per-URL 8주 sparkline 용 lookback 길이.
+const TREND_LAST_N = parseInt(process.env.TREND_LAST_N || "8", 10);
 
 function exists(p) {
   return fs.existsSync(p);
@@ -123,6 +131,51 @@ function csvEscape(v) {
   return t;
 }
 
+const SPARK_BARS = "▁▂▃▄▅▆▇█";
+function sparkline(values) {
+  const valid = values.filter((v) => typeof v === "number" && Number.isFinite(v));
+  if (valid.length === 0) return "";
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
+  const range = max - min || 1;
+  return values
+    .map((v) => {
+      if (typeof v !== "number" || !Number.isFinite(v)) return "·";
+      const idx = Math.min(
+        SPARK_BARS.length - 1,
+        Math.max(0, Math.round(((v - min) / range) * (SPARK_BARS.length - 1)))
+      );
+      return SPARK_BARS[idx];
+    })
+    .join("");
+}
+
+// 가장 최근 N개의 latest-per-day 스냅샷에서 (device, url) 별 perf(0-100) 시계열을 만든다.
+function buildTrendIndex(entries, lastN) {
+  const recent = entries.slice(-lastN);
+  const trend = new Map();
+  for (let i = 0; i < recent.length; i++) {
+    const e = recent[i];
+    let data;
+    try {
+      data = readJson(path.join(HISTORY_DIR, e.fileName));
+    } catch {
+      continue;
+    }
+    const items = Array.isArray(data?.items) ? data.items : [];
+    for (const item of items) {
+      const dev = item.device || "";
+      const url = item.url || "";
+      if (!dev || !url) continue;
+      const key = `${dev}||${url}`;
+      if (!trend.has(key)) trend.set(key, new Array(recent.length).fill(null));
+      trend.get(key)[i] =
+        typeof item.performance === "number" ? Math.round(item.performance * 100) : null;
+    }
+  }
+  return { trend, span: recent.length };
+}
+
 function normalizeItems(summary) {
   const items = Array.isArray(summary.items) ? summary.items : [];
   return items
@@ -192,16 +245,24 @@ function main() {
     }
   }
 
+  const { trend: trendIdx, span: trendSpan } = buildTrendIndex(entries, TREND_LAST_N);
+
   const allKeys = new Set([...nowIdx.keys(), ...pastIdx.keys()]);
 
   const rows = [];
   for (const key of allKeys) {
     const n = nowIdx.get(key) || {};
     const p = pastIdx.get(key) || {};
+    const device = n.device || p.device || "";
+    const url = n.url || p.url || "";
+
+    const series = trendIdx.get(`${device}||${url}`) || [];
+    const trendStr = sparkline(series);
 
     rows.push({
-      device: n.device || p.device || "",
-      url: n.url || p.url || "",
+      device,
+      url,
+      trend: trendStr,
 
       perf_past: p.perf,
       perf_now: n.perf,
@@ -240,15 +301,15 @@ function main() {
   });
 
   const header =
-    `# 3 Month Comparison (All URLs)\n\n` +
+    `# ${COMPARE_TITLE}\n\n` +
     `- Now: ${nowDate.toISOString().slice(0, 10)}\n` +
-    `- Past (nearest to ~${PAST_DAYS}d ago, latest-per-day): ${hasPast ? pastLabel : "(not enough history yet)"}\n` +
+    `- ${COMPARE_LABEL}: ${hasPast ? pastLabel : "(not enough history yet)"}\n` +
     `- Rows: ${rows.length}\n` +
-    `- Columns: Perf/A11y/BP/SEO/LCP/CLS (Past→Now, Δ)\n\n`;
+    `- Columns: Trend(${trendSpan}w) + Perf/A11y/BP/SEO/LCP/CLS (Past→Now, Δ)\n\n`;
 
   const tableHead =
-    `| Device | URL | Perf (Past→Now, Δ) | A11y (Past→Now, Δ) | BP (Past→Now, Δ) | SEO (Past→Now, Δ) | LCP (Past→Now, Δ) | CLS (Past→Now, Δ) |\n` +
-    `|---|---|---:|---:|---:|---:|---:|---:|\n`;
+    `| Device | URL | Trend (${trendSpan}w) | Perf (Past→Now, Δ) | A11y (Past→Now, Δ) | BP (Past→Now, Δ) | SEO (Past→Now, Δ) | LCP (Past→Now, Δ) | CLS (Past→Now, Δ) |\n` +
+    `|---|---|:---:|---:|---:|---:|---:|---:|---:|\n`;
 
   const mdLines = rows.map((r) => {
     const perfCell = `${r.perf_past ?? ""}→${r.perf_now ?? ""} (${r.perf_delta ?? ""})`;
@@ -264,7 +325,9 @@ function main() {
       `${fmtNum(r.cls_past, 3)}→${fmtNum(r.cls_now, 3)} ` +
       `(${r.cls_delta == null ? "" : r.cls_delta.toFixed(3)})`;
 
-    return `| ${r.device} | ${r.url} | ${perfCell} | ${a11yCell} | ${bpCell} | ${seoCell} | ${lcpCell} | ${clsCell} |`;
+    const trendCell = r.trend ? `\`${r.trend}\`` : "";
+
+    return `| ${r.device} | ${r.url} | ${trendCell} | ${perfCell} | ${a11yCell} | ${bpCell} | ${seoCell} | ${lcpCell} | ${clsCell} |`;
   });
 
   const md =
@@ -281,6 +344,7 @@ function main() {
   const csvHeader = [
     "device",
     "url",
+    "trend",
     "perf_past",
     "perf_now",
     "perf_delta",
@@ -309,6 +373,7 @@ function main() {
     return [
       csvEscape(r.device),
       csvEscape(r.url),
+      csvEscape(r.trend || ""),
 
       r.perf_past ?? "",
       r.perf_now ?? "",

@@ -12,6 +12,7 @@ const path = require("path");
 
 const IN_PATH = path.join("results", "ai-input.json");
 const OUT_PATH = path.join("results", "ai-suggestions.md");
+const APPLIED_PATH = process.env.APPLIED_ACTIONS_PATH || "applied-actions.md";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -27,14 +28,27 @@ function writeText(p, text) {
   fs.writeFileSync(p, text, "utf-8");
 }
 
-function buildPrompt(input) {
+function buildPrompt(input, appliedActions) {
   const warn = Math.round((input.thresholds?.warn ?? 0.8) * 100);
   const crit = Math.round((input.thresholds?.crit ?? 0.6) * 100);
+
+  const appliedBlock = appliedActions && appliedActions.trim()
+    ? `
+
+이미 적용된 액션 목록 (다시 같은 액션을 제안하지 말 것):
+\`\`\`
+${appliedActions.trim()}
+\`\`\`
+규칙:
+- 위에 적힌 액션과 동일/유사한 작업은 새 "개선 액션" 으로 제안하지 말 것.
+- 해당 액션이 적용된 host/URL 의 metric 변화가 보이면 "Per-site Diagnosis" 의 '원인 가설' 또는 'Cross-cutting Recommendations' 에서 한 줄로 "이전 적용한 X 가 Y metric 에 어떤 영향을 줬는지" 검증 코멘트를 남길 것.
+`
+    : "";
 
   return `
 너는 Lighthouse/Core Web Vitals 기반 웹 성능 개선 컨설턴트다.
 아래 JSON 은 여러 사이트의 측정 결과로 mobile/desktop URL 별 점수·metric 과 host 별 집계를 포함한다.
-
+${appliedBlock}
 목표:
 - 일반론이 아니라 host/URL 단위로 구체적인 진단을 한다.
 - 각 액션은 어떤 요소/리소스를 어떻게 바꾸면 어떤 metric(LCP/CLS/TBT/INP 등)이 어떻게 개선되는지 명시.
@@ -161,12 +175,22 @@ async function main() {
   const slim = {
     generatedAt: input.generatedAt,
     thresholds: input.thresholds,
-    worst: input.worst,
-    summary: input.summary,
-    problems: Array.isArray(input.problems) ? input.problems.slice(0, 10) : undefined,
+    overall: input.overall,
+    problems: Array.isArray(input.problems) ? input.problems : undefined,
+    byHost: input.byHost,
   };
 
-  const prompt = buildPrompt(slim);
+  let appliedActions = null;
+  if (fs.existsSync(APPLIED_PATH)) {
+    try {
+      appliedActions = fs.readFileSync(APPLIED_PATH, "utf-8");
+      console.log(`ℹ️ Loaded applied-actions from ${APPLIED_PATH} (${appliedActions.length} chars)`);
+    } catch (e) {
+      console.warn(`⚠️ Failed to read ${APPLIED_PATH}:`, e?.message || e);
+    }
+  }
+
+  const prompt = buildPrompt(slim, appliedActions);
 
   try {
     const md = await callOpenAI(prompt);
