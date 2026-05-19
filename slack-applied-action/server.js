@@ -11,6 +11,7 @@
  * 환경변수:
  *   - PORT                  (기본 8080. Railway 가 자동 주입)
  *   - SLACK_SIGNING_SECRET  (필수) — Slack App Basic Information → Signing Secret
+ *   - SLACK_BOT_TOKEN       (권장) — xoxb-... . 있으면 chat.postMessage 로 thread_ts 를 살려 스레드 안에 응답 게시. 없으면 인라인 JSON 응답으로 fallback (스레드 안에 있어도 채널로 노출 가능).
  *   - GITHUB_TOKEN          (필수) — Fine-grained PAT. Contents: Read & Write 만
  *   - GITHUB_REPO           (기본 dev2359/site-monitoring)
  *   - GITHUB_FILE_PATH      (기본 applied-actions.md)
@@ -24,6 +25,7 @@ const crypto = require("crypto");
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || "";
+const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || "";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "dev2359/site-monitoring";
 const GITHUB_FILE = process.env.GITHUB_FILE_PATH || "applied-actions.md";
@@ -128,16 +130,9 @@ function appendLine(currentMd, dateStr, host, content) {
   return `${trimmed}\n${line}\n`;
 }
 
-async function handleCommand(form) {
+// GitHub 업데이트 + 결과 텍스트 반환 (UI 응답 형식은 호출부에서 결정).
+async function recordAppliedAction(form) {
   const text = (form.text || "").trim();
-  if (!text) {
-    return {
-      response_type: "ephemeral",
-      text:
-        "사용법: `/applied-action <host> <내용>`\n예시: `/applied-action wellit.co.kr hero 배너 WebP 변환 + fetchpriority 적용 (LCP 단축)`",
-    };
-  }
-
   const { host, content } = extractHost(text);
   const dateStr = new Date().toISOString().slice(0, 10);
   const user = form.user_name || "unknown";
@@ -149,14 +144,33 @@ async function handleCommand(form) {
   const result = await githubPutFile(updated, sha, commitMessage);
   const commitSha = (result.commit?.sha || "").slice(0, 7);
 
-  return {
-    response_type: "in_channel",
-    text:
-      `✅ applied-actions.md 에 기록됨\n` +
-      `*host:* ${host || "_(미지정)_"}\n` +
-      `*내용:* ${content}\n` +
-      `*commit:* \`${commitSha}\``,
-  };
+  return (
+    `✅ applied-actions.md 에 기록됨\n` +
+    `*host:* ${host || "_(미지정)_"}\n` +
+    `*내용:* ${content}\n` +
+    `*commit:* \`${commitSha}\``
+  );
+}
+
+// chat.postMessage — thread_ts 가 있으면 스레드 안에 게시.
+async function slackPostMessage({ channel, thread_ts, text }) {
+  if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN missing");
+  if (!channel) throw new Error("channel missing");
+  const body = { channel, text };
+  if (thread_ts) body.thread_ts = thread_ts;
+  const res = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!json.ok) {
+    throw new Error(`chat.postMessage failed: ${json.error || res.status}`);
+  }
+  return json;
 }
 
 const server = http.createServer((req, res) => {
@@ -174,7 +188,7 @@ const server = http.createServer((req, res) => {
 
   let raw = "";
   req.on("data", (chunk) => (raw += chunk));
-  req.on("end", async () => {
+  req.on("end", () => {
     if (!SLACK_SIGNING_SECRET || !GITHUB_TOKEN) {
       res.writeHead(500);
       res.end("server misconfigured (missing env)");
@@ -187,20 +201,62 @@ const server = http.createServer((req, res) => {
     }
 
     const form = parseUrlEncoded(raw);
-    try {
-      const result = await handleCommand(form);
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify(result));
-    } catch (err) {
-      console.error("handler error:", err);
+    const text = (form.text || "").trim();
+
+    // 빈 입력 → 사용법을 ephemeral 로 즉시 안내
+    if (!text) {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(
         JSON.stringify({
           response_type: "ephemeral",
-          text: `❌ 기록 실패: ${err?.message || err}`,
+          text:
+            "사용법: `/applied-action <host> <내용>`\n예시: `/applied-action wellit.co.kr hero 배너 WebP 변환 + fetchpriority 적용 (LCP 단축)`",
         })
       );
+      return;
     }
+
+    if (SLACK_BOT_TOKEN) {
+      // ack 즉시 200(빈 응답) — Slack UI 상엔 슬래시 커맨드만 사라지고 곧 봇 메시지 도착.
+      // GitHub 호출 + chat.postMessage 는 비동기로 진행해 3초 timeout 회피.
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end("{}");
+
+      const channel = form.channel_id;
+      const threadTs = form.thread_ts || undefined;
+      (async () => {
+        try {
+          const msg = await recordAppliedAction(form);
+          await slackPostMessage({ channel, thread_ts: threadTs, text: msg });
+        } catch (err) {
+          console.error("async handler error:", err);
+          await slackPostMessage({
+            channel,
+            thread_ts: threadTs,
+            text: `❌ 기록 실패: ${err?.message || err}`,
+          }).catch((e) => console.error("error posting failure msg:", e));
+        }
+      })();
+      return;
+    }
+
+    // Fallback (SLACK_BOT_TOKEN 미설정): 인라인 JSON 응답.
+    // 이 경우 스레드에서 실행해도 결과가 채널로 노출될 수 있음.
+    recordAppliedAction(form)
+      .then((msg) => {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ response_type: "in_channel", text: msg }));
+      })
+      .catch((err) => {
+        console.error("handler error:", err);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(
+          JSON.stringify({
+            response_type: "ephemeral",
+            text: `❌ 기록 실패: ${err?.message || err}`,
+          })
+        );
+      });
   });
 });
 
@@ -209,4 +265,5 @@ server.listen(PORT, () => {
   console.log(`  GitHub: ${GITHUB_REPO}/${GITHUB_FILE}@${GITHUB_BRANCH}`);
   console.log(`  Signing secret: ${SLACK_SIGNING_SECRET ? "set" : "MISSING ⚠️"}`);
   console.log(`  GitHub token: ${GITHUB_TOKEN ? "set" : "MISSING ⚠️"}`);
+  console.log(`  Slack bot token: ${SLACK_BOT_TOKEN ? "set (thread-aware)" : "missing (fallback inline mode)"}`);
 });

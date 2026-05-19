@@ -12,6 +12,7 @@ Slack `/applied-action` 슬래시 커맨드 핸들러. Railway 에 별도 서비
 | Key | 필수 | 설명 |
 |---|---|---|
 | `SLACK_SIGNING_SECRET` | ✓ | Slack App Basic Information → Signing Secret |
+| `SLACK_BOT_TOKEN` | 권장 | `xoxb-...`. 있으면 chat.postMessage 로 스레드 안에 응답 게시. 없으면 인라인 JSON fallback (스레드 안에 있어도 채널 노출 가능) |
 | `GITHUB_TOKEN` | ✓ | Fine-grained PAT, Contents Read & Write 만 |
 | `GITHUB_REPO` | | 기본 `dev2359/site-monitoring` |
 | `GITHUB_FILE_PATH` | | 기본 `applied-actions.md` |
