@@ -410,7 +410,6 @@ function main() {
 
   // ===== THREAD (펼침, 상세 전부) =====
   const threadBlocks = [];
-  threadBlocks.push({ type: "section", text: { type: "mrkdwn", text: worstLine } });
   threadBlocks.push({
     type: "section",
     text: { type: "mrkdwn", text: `*📱 Top Mobile Problems*\n${topMobileLines.join("\n")}` },
