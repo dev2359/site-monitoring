@@ -207,6 +207,106 @@ async function callOpenAI(prompt) {
   }
 }
 
+// 1차 응답 markdown 의 "## Top URL Actions" 섹션에서 ### [Mobile|Desktop] URL 헤더만 추출.
+// (device, url) 정규화된 키 집합을 반환 — slackTargets 와 비교용.
+function extractRespondedKeys(md) {
+  const keys = new Set();
+  if (!md) return keys;
+  const lines = md.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^##\s*Top URL Actions/i.test(l.trim()));
+  if (start === -1) return keys;
+  const normUrl = (u) => String(u || "").replace(/\/+$/, "").toLowerCase();
+  for (let i = start + 1; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (/^##\s+/.test(t)) break;
+    const m = t.match(/^###\s*\[?(Mobile|Desktop|M|D)\]?\s+(\S.+?)\s*\(/i);
+    if (m) {
+      const dev = /^m/i.test(m[1]) ? "mobile" : "desktop";
+      keys.add(`${dev}|${normUrl(m[2].trim())}`);
+    }
+  }
+  return keys;
+}
+
+// 누락 URL 만 다루도록 짧은 retry 프롬프트 — TL;DR/Per-site/Cross-cutting 은 출력하지 않음.
+function buildRetryPrompt(missing) {
+  const listed = missing
+    .map((t, i) => {
+      const perf = typeof t.performance === "number" ? Math.round(t.performance * 100) : "?";
+      const lcp = t.metrics?.lcp ? `${Math.round(t.metrics.lcp)}ms` : "?";
+      const cls = typeof t.metrics?.cls === "number" ? t.metrics.cls.toFixed(3) : "?";
+      const tbt = t.metrics?.tbt ? `${Math.round(t.metrics.tbt)}ms` : "?";
+      const dev = t.device === "mobile" ? "Mobile" : "Desktop";
+      return `${i + 1}. [${dev}] ${t.url} (Perf ${perf}, LCP ${lcp}, CLS ${cls}, TBT ${tbt})`;
+    })
+    .join("\n");
+
+  return `
+이전 응답에서 다음 ${missing.length}개 URL 을 빠뜨렸다. 아래 URL 들만 다뤄라.
+TL;DR / Per-site Diagnosis / Cross-cutting Recommendations 섹션은 출력하지 말 것.
+"## Top URL Actions" 헤더 한 줄 다음에 URL 별 블록만 출력.
+
+대상 URL:
+${listed}
+
+형식 (정확히 지킬 것):
+
+## Top URL Actions
+
+### [{Device}] {url} (Perf {n})
+- **메트릭:** LCP {n}ms, CLS {n}, TBT {n}ms
+- **액션:**
+  - 액션 1 (어떤 요소/리소스 → 어떤 작업 → 기대 효과 metric)
+  - 액션 2
+  - 액션 3
+`.trim();
+}
+
+// 2차 응답의 URL 블록들만 추출해 1차 markdown 의 Top URL Actions 섹션 끝에 append.
+function mergeTopUrlActions(md1, md2) {
+  if (!md2) return md1;
+
+  // md2 에서 ### 로 시작하는 URL 블록만 모음.
+  const m2lines = md2.split(/\r?\n/);
+  const blocks = [];
+  let cur = [];
+  let inSection = false;
+  for (const line of m2lines) {
+    if (/^###\s*\[/.test(line)) {
+      if (cur.length) blocks.push(cur.join("\n").trimEnd());
+      cur = [line];
+      inSection = true;
+    } else if (/^##\s+/.test(line)) {
+      if (cur.length) blocks.push(cur.join("\n").trimEnd());
+      cur = [];
+      inSection = false;
+    } else if (inSection) {
+      cur.push(line);
+    }
+  }
+  if (cur.length) blocks.push(cur.join("\n").trimEnd());
+  if (blocks.length === 0) return md1;
+
+  // md1 의 Top URL Actions 섹션 끝 위치 찾기.
+  const m1lines = md1.split(/\r?\n/);
+  const topIdx = m1lines.findIndex((l) => /^##\s*Top URL Actions/i.test(l.trim()));
+  if (topIdx === -1) {
+    return `${md1}\n\n## Top URL Actions\n\n${blocks.join("\n\n")}\n`;
+  }
+  let endIdx = m1lines.length;
+  for (let i = topIdx + 1; i < m1lines.length; i++) {
+    if (/^##\s+/.test(m1lines[i].trim())) {
+      endIdx = i;
+      break;
+    }
+  }
+  const before = m1lines.slice(0, endIdx);
+  // 끝쪽 빈 줄 정리.
+  while (before.length && before[before.length - 1].trim() === "") before.pop();
+  const after = m1lines.slice(endIdx);
+  return [...before, "", blocks.join("\n\n"), "", ...after].join("\n");
+}
+
 function fallbackMarkdown(err) {
   return `# AI Suggestions (fallback)
 
@@ -237,6 +337,9 @@ async function main() {
     overall: input.overall,
     problems: Array.isArray(input.problems) ? input.problems : undefined,
     byHost: input.byHost,
+    // slackTargets 는 buildPrompt 의 [Slack 노출 대상] 강제 지시에 필수 — 빠지면 AI 가
+    // 자유롭게 URL 을 고르게 되어 slackTargets 와 어긋난 응답이 나온다.
+    slackTargets: Array.isArray(input.slackTargets) ? input.slackTargets : undefined,
   };
 
   let appliedFiltered = null;
@@ -256,7 +359,47 @@ async function main() {
   const prompt = buildPrompt(slim, appliedFiltered);
 
   try {
-    const md = await callOpenAI(prompt);
+    let md = await callOpenAI(prompt);
+
+    // AI 가 프롬프트의 "slackTargets N개 모두 다뤄라" 지시를 무시하고 일부 URL 을 빠뜨리는 경우가 있어,
+    // 응답에서 누락된 항목을 식별해 *누락된 URL 만* 한 번 더 요청 → 1차 결과에 병합.
+    // 재호출도 누락되면 placeholder 처리는 build-slack-payload.js 가 담당.
+    const slackTargets = Array.isArray(input.slackTargets) ? input.slackTargets : [];
+    if (slackTargets.length > 0) {
+      const normUrl = (u) => String(u || "").replace(/\/+$/, "").toLowerCase();
+      const responded = extractRespondedKeys(md);
+      const missing = slackTargets.filter(
+        (t) => !responded.has(`${t.device}|${normUrl(t.url)}`)
+      );
+
+      if (missing.length > 0) {
+        console.warn(
+          `⚠️ AI 가 slackTargets 중 ${missing.length}/${slackTargets.length} 개 빠뜨림 → retry`
+        );
+        missing.forEach((t) => console.warn(`   - [${t.device}] ${t.url}`));
+
+        try {
+          const retryPrompt = buildRetryPrompt(missing);
+          const md2 = await callOpenAI(retryPrompt);
+          const merged = mergeTopUrlActions(md, md2);
+          const responded2 = extractRespondedKeys(merged);
+          const stillMissing = slackTargets.filter(
+            (t) => !responded2.has(`${t.device}|${normUrl(t.url)}`)
+          );
+          console.log(
+            `   retry 결과: ${missing.length - stillMissing.length}/${missing.length} 회복, 잔여 누락 ${stillMissing.length}`
+          );
+          md = merged;
+        } catch (retryErr) {
+          console.warn(
+            `⚠️ retry 호출 실패 — 1차 결과 그대로 사용: ${retryErr?.message || retryErr}`
+          );
+        }
+      } else {
+        console.log(`✅ slackTargets ${slackTargets.length}개 모두 응답에 포함`);
+      }
+    }
+
     const out = md.includes("## TL;DR") ? md : `# AI Suggestions\n\n${md}`;
     writeText(OUT_PATH, out);
     console.log(`✅ AI suggestions written: ${OUT_PATH}`);
