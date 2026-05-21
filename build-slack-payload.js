@@ -503,9 +503,24 @@ function main() {
         const metricLine = u.metric ? `   _${u.metric}_\n` : "";
         blockText = `${head}\n${metricLine}   _⚠️ AI 응답에서 누락 — 다음 실행에서 자동 재시도_`;
       }
+
+      // "완료 기록" 버튼 — 클릭 시 Railway 서비스가 host prefill 된 modal 을 띄움.
+      // value: "<host>|<url>" 형식. Slack value 한도 2000자.
+      let host = "";
+      try {
+        host = new URL(u.url).host;
+      } catch {}
+      const accessory = {
+        type: "button",
+        text: { type: "plain_text", text: "✅ 액션 기록", emoji: true },
+        action_id: "record_applied_action_btn",
+        value: `${host}|${u.url}`,
+      };
+
       threadBlocks.push({
         type: "section",
         text: { type: "mrkdwn", text: blockText },
+        accessory,
       });
     }
   }

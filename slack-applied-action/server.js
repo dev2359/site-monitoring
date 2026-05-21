@@ -1,10 +1,10 @@
 /**
- * Slack /applied-action 핸들러 + Message Shortcut(스레드 지원) 핸들러.
+ * Slack /applied-action 핸들러 + Message Shortcut + "✅ 액션 기록" 버튼 핸들러.
  *
  * 엔드포인트:
  *   - POST /applied-action       — 슬래시 커맨드 (메인 채널 전용 — Slack 정책상 스레드 미지원)
- *   - POST /slack/interactivity  — Message Shortcut(message_action) → modal open / Modal 제출(view_submission) → 기록.
- *                                   Shortcut 은 스레드 내 메시지 ⋯ 메뉴에서도 실행 가능 → 결과를 같은 스레드에 게시.
+ *   - POST /slack/interactivity  — Message Shortcut(message_action) / 버튼 클릭(block_actions) / Modal 제출(view_submission).
+ *                                   모두 스레드 안에서도 동작 → 결과를 같은 스레드에 게시.
  *
  * 흐름 (슬래시 커맨드):
  *   1. POST /applied-action 호출
@@ -18,6 +18,11 @@
  *   2. trigger_id 로 views.open 호출해 host/내용 입력 modal 표시
  *   3. 사용자가 modal 제출 → POST /slack/interactivity (payload.type='view_submission')
  *   4. private_metadata 에서 channel/thread_ts 복원, GitHub 업데이트, 스레드(또는 메시지 하단)에 결과 게시
+ *
+ * 흐름 (Top URL Actions "✅ 액션 기록" 버튼):
+ *   1. Lighthouse 주간 리포트의 URL 별 블록 옆 버튼 클릭 → POST /slack/interactivity (payload.type='block_actions')
+ *   2. button.value 의 "host|url" 에서 host 추출 → host prefill 된 modal 을 views.open
+ *   3. 이후 흐름은 Shortcut 과 동일 (view_submission → GitHub 기록 → 스레드 응답)
  *
  * 환경변수:
  *   - PORT                  (기본 8080. Railway 가 자동 주입)
@@ -184,6 +189,8 @@ async function recordAppliedAction(form) {
 // Message Shortcut callback_id (Slack App 설정과 정확히 일치해야 함).
 const SHORTCUT_CALLBACK_ID = "record_applied_action";
 const MODAL_CALLBACK_ID = "applied_action_modal";
+// Top URL Actions 블록의 "✅ 액션 기록" 버튼 action_id (build-slack-payload.js 와 일치).
+const BUTTON_ACTION_ID = "record_applied_action_btn";
 
 // Slack views.open — Message Shortcut 클릭 시 modal 띄우기.
 async function slackOpenView(triggerId, view) {
@@ -203,7 +210,19 @@ async function slackOpenView(triggerId, view) {
   return json;
 }
 
-function buildAppliedActionModal({ channelId, threadTs }) {
+function buildAppliedActionModal({ channelId, threadTs, prefillHost }) {
+  const hostElement = {
+    type: "plain_text_input",
+    action_id: "host_input",
+    placeholder: { type: "plain_text", text: "wellit.co.kr" },
+  };
+  // 버튼 클릭 진입의 경우 클릭한 URL 의 host 가 자동 입력됨 (사용자가 host 타이핑 생략).
+  if (prefillHost) hostElement.initial_value = prefillHost;
+
+  const hostHint = prefillHost
+    ? "버튼 클릭한 URL 에서 자동 입력됨. 필요시 수정 가능."
+    : "도메인만. https:// 나 path 는 자동 제거됨.";
+
   return {
     type: "modal",
     callback_id: MODAL_CALLBACK_ID,
@@ -217,15 +236,8 @@ function buildAppliedActionModal({ channelId, threadTs }) {
         block_id: "host_block",
         optional: true,
         label: { type: "plain_text", text: "Host (선택)" },
-        element: {
-          type: "plain_text_input",
-          action_id: "host_input",
-          placeholder: { type: "plain_text", text: "wellit.co.kr" },
-        },
-        hint: {
-          type: "plain_text",
-          text: "도메인만. https:// 나 path 는 자동 제거됨.",
-        },
+        element: hostElement,
+        hint: { type: "plain_text", text: hostHint },
       },
       {
         type: "input",
@@ -258,6 +270,28 @@ async function handleMessageAction(payload) {
   const threadTs = msg.thread_ts || msg.ts;
 
   const view = buildAppliedActionModal({ channelId, threadTs });
+  await slackOpenView(payload.trigger_id, view);
+}
+
+// "✅ 액션 기록" 버튼 클릭(payload.type='block_actions') → host prefill modal open.
+// button.value 형식: "<host>|<url>" — build-slack-payload.js 와 계약.
+async function handleBlockActions(payload) {
+  const action = (payload.actions || [])[0];
+  if (!action || action.action_id !== BUTTON_ACTION_ID) {
+    console.warn(`unknown block_actions action_id: ${action?.action_id}`);
+    return;
+  }
+
+  const value = action.value || "";
+  const [rawHost] = value.split("|");
+  const prefillHost = cleanHost(rawHost);
+
+  const channelId = payload.channel?.id;
+  const msg = payload.message || {};
+  // 메인 메시지의 버튼이면 그 메시지를 thread root 로, 스레드 안 메시지의 버튼이면 부모 thread_ts 에 답글.
+  const threadTs = msg.thread_ts || msg.ts;
+
+  const view = buildAppliedActionModal({ channelId, threadTs, prefillHost });
   await slackOpenView(payload.trigger_id, view);
 }
 
@@ -350,6 +384,16 @@ function handleInteractivity(req, res) {
       res.end();
       handleMessageAction(payload).catch((err) =>
         console.error("message_action error:", err?.message || err)
+      );
+      return;
+    }
+
+    if (payload.type === "block_actions") {
+      // Top URL Actions 의 "✅ 액션 기록" 버튼 → host prefill modal open.
+      res.writeHead(200);
+      res.end();
+      handleBlockActions(payload).catch((err) =>
+        console.error("block_actions error:", err?.message || err)
       );
       return;
     }
