@@ -1,6 +1,6 @@
 /**
  * build-slack-payload.js
- * - input: results/summary.json, results/ai-suggestions.md (optional)
+ * - input: results/summary.json, results/ai-input.json (slackTargets 정답지), results/ai-suggestions.md (optional)
  * - output: results/slack-payload.json
  *
  * Node 18 compatible, no extra deps.
@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SUMMARY_PATH = path.join("results", "summary.json");
+const AI_INPUT_PATH = path.join("results", "ai-input.json");
 const AI_MD_PATH = path.join("results", "ai-suggestions.md");
 const WOW_CSV_PATH = path.join("results", "compare-wow.csv");
 const OWNERS_PATH = "owners.json";
@@ -268,6 +269,42 @@ function buildOwnerLines(problems, owners) {
   });
 }
 
+// AI 가 프롬프트의 "이 6개 URL 만 다뤄라" 지시를 무시하고 다른 URL 을 끼워넣는 경우가 있어,
+// ai-input.json 의 slackTargets 를 *정답지* 로 두고 AI 응답을 정합화한다.
+// - slackTargets URL 과 매칭되는 AI entry 만 통과 (AI 의 actions 그대로 사용)
+// - slackTargets 에 있지만 AI 가 빠뜨린 URL 은 metric-only placeholder 로 채움
+// - slackTargets 자체가 없는 경우(레거시 ai-input) → AI 출력 그대로 fallback
+function reconcileTopUrls(slackTargets, aiTopUrls) {
+  if (!Array.isArray(slackTargets) || slackTargets.length === 0) {
+    return (aiTopUrls || []).map((u) => ({ ...u, _matched: true }));
+  }
+
+  const normUrl = (u) => String(u || "").replace(/\/+$/, "").toLowerCase();
+  // 동일 URL 이 mobile/desktop 양쪽에 있을 수 있어 (device, url) 복합키로 인덱싱.
+  const key = (device, url) => `${device}|${normUrl(url)}`;
+  const byKey = new Map();
+  for (const t of aiTopUrls || []) byKey.set(key(t.device, t.url), t);
+
+  return slackTargets.map((st) => {
+    const matched = byKey.get(key(st.device, st.url));
+    if (matched) {
+      return { ...matched, _matched: true };
+    }
+    const m = st.metrics || {};
+    const lcp = m.lcp ? `${Math.round(m.lcp)}ms` : "?";
+    const cls = typeof m.cls === "number" ? m.cls.toFixed(3) : "?";
+    const tbt = m.tbt ? `${Math.round(m.tbt)}ms` : "?";
+    return {
+      device: st.device,
+      url: st.url,
+      perf: typeof st.performance === "number" ? Math.round(st.performance * 100) : null,
+      metric: `LCP ${lcp}, CLS ${cls}, TBT ${tbt}`,
+      actions: [],
+      _matched: false,
+    };
+  });
+}
+
 function buildProblemLines(problems, warn01, crit01, limit) {
   const sorted = problems
     .slice()
@@ -371,7 +408,19 @@ function main() {
   // 단일 큰 블록은 Slack 의 message-level "자세히 보기" 토글을 유발할 수 있어 URL 1 개당 별도 섹션으로 분할.
   const TOP_URL_LIMIT = 6;
   const ACTIONS_PER_URL = 3; // 6 개 URL 모두 상세 노출 — 각 URL 당 액션 3 개까지
-  const topUrlEntriesForSlack = ai.topUrls.slice(0, TOP_URL_LIMIT);
+
+  // ai-input.json 의 slackTargets 를 정답지로 두고 AI 응답을 정합화 (AI hallucination 방어).
+  let slackTargets = [];
+  if (fs.existsSync(AI_INPUT_PATH)) {
+    try {
+      const aiInput = readJson(AI_INPUT_PATH);
+      slackTargets = Array.isArray(aiInput.slackTargets) ? aiInput.slackTargets : [];
+    } catch (e) {
+      console.warn(`⚠️ ai-input.json 파싱 실패:`, e?.message || e);
+    }
+  }
+  const topUrlEntriesForSlack = reconcileTopUrls(slackTargets, ai.topUrls).slice(0, TOP_URL_LIMIT);
+  const missingFromAi = topUrlEntriesForSlack.filter((u) => !u._matched).length;
 
   // Owner 멘션 라인 — Top URL Actions 에 노출되는 6 개 URL 의 host 만 대상으로.
   // (AI 응답이 비어있으면 fallback 으로 Slack 표시되는 Top Mobile/Desktop Problems 의 host 사용)
@@ -441,12 +490,19 @@ function main() {
     for (const u of topUrlEntriesForSlack) {
       const tag = deviceTag(u.device);
       const short = shortenUrl(u.url);
-      const acts = u.actions
-        .slice(0, ACTIONS_PER_URL)
-        .map((a) => `   • ${a}`)
-        .join("\n");
       const head = `*[${tag}] <${u.url}|${short}>* \`P:${u.perf}\``;
-      const blockText = acts ? `${head}\n${acts}` : head;
+      let blockText;
+      if (u._matched && Array.isArray(u.actions) && u.actions.length > 0) {
+        const acts = u.actions
+          .slice(0, ACTIONS_PER_URL)
+          .map((a) => `   • ${a}`)
+          .join("\n");
+        blockText = `${head}\n${acts}`;
+      } else {
+        // AI 가 이 URL 을 빠뜨림 — metric 만 표시 + 다음 실행 재시도 안내.
+        const metricLine = u.metric ? `   _${u.metric}_\n` : "";
+        blockText = `${head}\n${metricLine}   _⚠️ AI 응답에서 누락 — 다음 실행에서 자동 재시도_`;
+      }
       threadBlocks.push({
         type: "section",
         text: { type: "mrkdwn", text: blockText },
@@ -481,6 +537,12 @@ function main() {
   console.log(`   main blocks: ${mainBlocks.length}, thread blocks: ${threadBlocks.length}`);
   if (wow) console.log(`   WoW: regressions=${wow.regressions}, improvements=${wow.improvements}`);
   if (ownerLines.length) console.log(`   Owner mention lines: ${ownerLines.length}`);
+  console.log(
+    `   Top URL Actions: ${topUrlEntriesForSlack.length} (slackTargets=${slackTargets.length}, AI 누락=${missingFromAi})`
+  );
+  if (missingFromAi > 0) {
+    console.warn(`⚠️ AI 가 slackTargets URL ${missingFromAi}개를 빠뜨림 → metric-only placeholder 로 채움`);
+  }
 }
 
 main();
