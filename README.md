@@ -20,6 +20,8 @@
 - `.github/workflows/lighthouse.yml`: 전체 실행 워크플로 (스케줄 + 수동)
 - `.github/workflows/slack-test-send.yml`: Lighthouse 측정을 **스킵**하고 마지막 history 스냅샷으로 Slack 메시지만 재발송 — 리포트 포맷 검증용
 - `.github/workflows/slack-delete.yml`: ts 입력받아 봇이 보낸 Slack 메시지 삭제 (메인/스레드 여러 ts 콤마 구분 가능)
+- `.github/workflows/railway-healthcheck.yml`: Railway 의 `slack-applied-action` 서비스 `/health` 를 매일 1회 ping. 실패 시 Slack webhook 으로 알림 — 액션 기록이 조용히 누락되는 상황 방지
+- `.github/workflows/history-compact.yml`: `history/` 의 오래된 스냅샷을 *주별 1개* 로 정리. **기본 dry-run** (목록만 Job Summary 출력), 수동 실행에서 `dry_run=false` 선택 시 실제 삭제 + 커밋
 
 ### 측정 / 집계
 
@@ -27,6 +29,7 @@
 - `lighthouserc_mobile.js`: Mobile LHCI 설정
 - `extract-scores.js`: Desktop/Mobile 결과 파싱 + 요약 생성. `module.exports = { buildAiInput, buildSummary }` 로 재사용 가능
 - `regenerate-ai-input.js`: `results/summary.json` 에서 `results/ai-input.json` 만 다시 생성하는 헬퍼 (`slack-test-send.yml` 이 사용)
+- `compact-history.js`: `history/` 의 오래된 스냅샷을 ISO 주별 1개씩만 남기고 정리. `DRY_RUN` 환경변수로 dry-run/real-delete 토글. `history-compact.yml` 워크플로가 호출
 - `build-3m-table.js`: 현재 vs 과거 비교 표/CSV 생성. `PAST_DAYS`/`OUT_MD`/`OUT_CSV`/`COMPARE_TITLE`/`COMPARE_LABEL` 환경변수로 윈도 변경 가능 (3개월 + WoW 두 번 호출). 표에 per-URL 8주 sparkline trend 컬럼 포함. baseline floor: `2026-04-22`
 - `build-regressions.js`: WoW 비교 CSV 에서 perf Δ ≤ -10 인 URL 만 추출해 회귀 보고서 생성 (Job Summary 전용)
 
@@ -70,6 +73,8 @@ Job 구성:
 
 - `slack-test-send.yml` (`workflow_dispatch`): 마지막 history 스냅샷 → `results/summary.json` 시드 → `regenerate-ai-input.js` → 비교/회귀/AI/페이로드 → Slack 발송. **Lighthouse 측정을 안 거치므로 1~2분 안에 끝남**. 리포트 포맷 검증/리허설용
 - `slack-delete.yml` (`workflow_dispatch`): 입력받은 ts 의 봇 메시지를 삭제. 콤마/공백으로 메인 ts + thread ts 등 다중 입력 가능. ts 는 `slack-test-send.yml` 실행 로그의 `main posted (ts=...)` / `thread reply posted (ts=...)` 라인에서 확인
+- `railway-healthcheck.yml` (스케줄 + 수동): 매일 1회 Railway `/health` 호출. 실패 시 Slack 으로 "🚨 액션 기록 누락 위험" 알림. Secret `RAILWAY_HEALTH_URL` 필요
+- `history-compact.yml` (스케줄 + 수동, **기본 dry-run**): 매주 월요일 `compact-history.js` 실행. dry-run 모드는 어떤 파일이 삭제될지 Job Summary 에만 표시 — 결과 확인 후 수동으로 `dry_run=false` 선택해 실제 삭제 수행
 
 ### Railway — `slack-applied-action/` 서비스
 
@@ -82,7 +87,8 @@ Job 구성:
 - `OPENAI_API_KEY`: OpenAI API 호출용
 - `SLACK_BOT_TOKEN`: Slack Bot User OAuth Token (`xoxb-...`). 스레드 분리 발송 및 봇 메시지 삭제에 필수. Bot Token Scope 에 `chat:write` 권한 필요
 - `SLACK_CHANNEL_ID`: 메시지를 발송할 Slack 채널 ID (`C0XXXXXXXX`). 채널에 봇이 초대돼 있어야 함 (`/invite @앱이름`)
-- (선택) `SLACK_WEBHOOK_URL`: `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID` 미설정 시의 fallback. 이 모드는 스레드 분리 불가
+- (선택) `SLACK_WEBHOOK_URL`: `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID` 미설정 시의 fallback. 이 모드는 스레드 분리 불가. **`railway-healthcheck.yml` 알림에도 재사용됨**
+- (선택) `RAILWAY_HEALTH_URL`: `railway-healthcheck.yml` 이 ping 하는 URL. 예: `https://<service>.up.railway.app/health`. 미설정 시 헬스체크 워크플로가 실패하므로, slack-applied-action 서비스를 운영한다면 등록 권장
 - `GITHUB_TOKEN`: 기본 제공 토큰 사용, 별도 설정 불필요 (history 자동 커밋용)
 
 ### Railway (`slack-applied-action`) 서비스 환경변수

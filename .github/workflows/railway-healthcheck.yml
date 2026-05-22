@@ -1,0 +1,63 @@
+name: Railway Healthcheck (slack-applied-action)
+
+# Railway 에 배포된 slack-applied-action 서비스의 /health 엔드포인트를 주기적으로 ping.
+# 실패하면 Slack webhook 으로 알림 — 서비스가 죽었는데 모르고 액션 기록이 누락되는 상황 방지.
+#
+# Secrets:
+#   RAILWAY_HEALTH_URL  — 예: https://<service>.up.railway.app/health
+#   SLACK_WEBHOOK_URL   — 알림 발송 (기존 주간 리포트와 같은 webhook 재사용 가능)
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # daily 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Railway /health
+        id: ping
+        env:
+          URL: ${{ secrets.RAILWAY_HEALTH_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::error::RAILWAY_HEALTH_URL secret 미설정"
+            exit 1
+          fi
+          echo "Pinging: $URL"
+          # 10초 timeout, HTTP 4xx/5xx 도 실패로 간주(-f).
+          if curl -fsS --max-time 10 "$URL" -o /tmp/body; then
+            BODY="$(cat /tmp/body)"
+            echo "✅ healthy (body=$BODY)"
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+            echo "body=$BODY" >> "$GITHUB_OUTPUT"
+          else
+            EXIT=$?
+            echo "::error::❌ unhealthy (curl exit=$EXIT)"
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          URL: ${{ secrets.RAILWAY_HEALTH_URL }}
+          WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL 미설정 — Slack 알림 생략"
+            exit 0
+          fi
+          # 메시지 한 번에 정리. AppliedAction 기록이 누락될 수 있는 상황임을 명시.
+          PAYLOAD=$(cat <<EOF
+          {
+            "text": "🚨 Railway slack-applied-action 서비스 헬스체크 실패\n• URL: $URL\n• 영향: '✅ 액션 기록' 버튼 / Shortcut / 슬래시 커맨드가 동작하지 않을 수 있음 → 다음 주간 AI 효과 검증 누락 위험\n• Run: $RUN_URL"
+          }
+          EOF
+          )
+          curl -sS -X POST -H 'Content-Type: application/json' --data "$PAYLOAD" "$WEBHOOK"

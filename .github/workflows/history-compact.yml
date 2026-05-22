@@ -1,0 +1,55 @@
+name: History Compact (dry-run by default)
+
+# history/ 의 오래된 스냅샷을 주별 1개로 압축.
+# 안전을 위해 *기본 dry-run* — 어떤 파일이 삭제될지 Job Summary 에만 출력.
+# 수동 실행에서 dry_run=false 로 선택해야 실제 삭제 + 커밋/푸시 발생.
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"   # 매주 월요일 01:00 UTC = KST 10:00
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true 면 삭제 안 함 (목록만 Job Summary 출력)"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      retention_months:
+        description: "이 개월 수 이내 파일은 손대지 않음"
+        required: false
+        default: "6"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Run compact-history.js
+        id: compact
+        env:
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
+          RETENTION_MONTHS: ${{ inputs.retention_months || '6' }}
+        run: node compact-history.js
+
+      - name: Commit & push (only when real delete happened)
+        if: steps.compact.outputs.changed == 'true'
+        run: |
+          git config user.name "history-compact-bot"
+          git config user.email "history-compact-bot@users.noreply.github.com"
+          git add -A history/
+          git commit -m "chore(history): compact $(date -u +%Y-%m-%d) — keep weekly snapshots beyond ${{ inputs.retention_months || '6' }}mo (${{ steps.compact.outputs.deleted }} files removed)"
+          git push
