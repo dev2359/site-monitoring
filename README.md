@@ -215,8 +215,10 @@ node send-slack.js     # 실제 발송 (SLACK_BOT_TOKEN/CHANNEL_ID 필요)
   - `warn`/`crit` 임계값 재조정
   - invalid 보고서와 분리 알림
 - **적용한 액션을 빠짐없이 기록**해야 AI 제안 품질이 유지됩니다.
-  - 스레드 안에서는 슬래시 커맨드가 막혀 있으므로, 메시지 ⋯ 메뉴 → **"Applied Action 기록"** Shortcut 사용
-  - 메인 채널에서는 `/applied-action <host> <내용>` 슬래시 커맨드 사용 가능
-  - 두 경로 모두 `applied-actions.md` 에 자동 커밋 → 다음 주간 실행부터 같은 액션 재제안 차단 + 효과 검증으로 전환
+  - 권장: 주간 리포트 스레드의 각 URL 블록 옆 **"✅ 액션 기록" 버튼** (host 자동 입력)
+  - 대안: 메시지 ⋯ 메뉴 → **"Applied Action 기록"** Shortcut (스레드 안에서도 가능)
+  - 메인 채널에서는 `/applied-action <host> <내용>` 슬래시 커맨드도 사용 가능
+  - modal 의 "적용 내용" 은 **여러 줄 입력 가능** — 줄당 1 entry 로 자동 분할, 들여쓰기로 시작한 줄은 이전 entry 의 부연으로 합쳐짐
+  - 모든 경로가 `applied-actions.md` 에 자동 커밋 → 다음 주간 실행부터 같은 액션 재제안 차단 + 효과 검증으로 전환
 - 담당자가 바뀌면 `owners.json` 의 host → Slack ID 매핑을 업데이트하세요. `_default` 가 fallback 입니다.
 

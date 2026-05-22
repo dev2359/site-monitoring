@@ -146,6 +146,28 @@ function appendLine(currentMd, dateStr, host, content) {
   return `${trimmed}\n${line}\n`;
 }
 
+// modal "적용 내용" textarea 를 라인별 entry 로 분할.
+// 규칙:
+//  - 빈 줄은 무시
+//  - 공백/탭으로 시작하는 줄은 *이전 entry 의 부연* 으로 간주해 이전 줄에 합침
+//    → 사용자가 의도적으로 들여쓰기하면 한 액션의 멀티라인 설명으로 유지됨
+//  - 그 외 줄은 새 entry
+function parseContentLines(content) {
+  if (!content) return [];
+  const raw = String(content).split(/\r?\n/);
+  const items = [];
+  for (const line of raw) {
+    if (!line.trim()) continue;
+    const isIndented = /^[ \t]/.test(line);
+    if (isIndented && items.length > 0) {
+      items[items.length - 1] += " " + line.trim();
+    } else {
+      items.push(line.trim());
+    }
+  }
+  return items;
+}
+
 function cleanHost(raw) {
   if (!raw) return null;
   let h = String(raw).trim();
@@ -155,26 +177,49 @@ function cleanHost(raw) {
   return h.toLowerCase() || null;
 }
 
-// 핵심 기록 로직 (슬래시 커맨드 / Message Shortcut 둘 다에서 호출).
+// 핵심 기록 로직 (슬래시 커맨드 / Message Shortcut / 버튼 모두에서 호출).
+// content 가 멀티라인이면 줄당 1 entry 로 분할 (들여쓰기 줄은 이전 entry 부연으로 합침).
 async function recordAppliedActionCore({ host, content, user }) {
   const dateStr = new Date().toISOString().slice(0, 10);
+  const items = parseContentLines(content);
+  if (items.length === 0) {
+    throw new Error("기록할 내용이 없습니다.");
+  }
+
   const { content: currentMd, sha } = await githubGetFile();
-  const updated = appendLine(currentMd, dateStr, host, content);
-  const summary = content.length > 60 ? content.slice(0, 57) + "..." : content;
-  const commitMessage = `chore(applied): ${host ? host + " - " : ""}${summary} (Slack by ${user})`;
+  let updated = currentMd;
+  for (const item of items) {
+    updated = appendLine(updated, dateStr, host, item);
+  }
+
+  const first = items[0];
+  const summary = first.length > 50 ? first.slice(0, 47) + "..." : first;
+  const commitMessage =
+    items.length > 1
+      ? `chore(applied): ${host ? host + " - " : ""}${summary} 외 ${items.length - 1}건 (Slack by ${user})`
+      : `chore(applied): ${host ? host + " - " : ""}${summary} (Slack by ${user})`;
+
   const result = await githubPutFile(updated, sha, commitMessage);
   const commitSha = (result.commit?.sha || "").slice(0, 7);
 
-  return {
-    host,
-    content,
-    commitSha,
-    message:
+  // 응답 메시지 — 단일 / 다중 분기.
+  let message;
+  if (items.length === 1) {
+    message =
       `✅ applied-actions.md 에 기록됨\n` +
       `*host:* ${host || "_(미지정)_"}\n` +
-      `*내용:* ${content}\n` +
-      `*commit:* \`${commitSha}\``,
-  };
+      `*내용:* ${items[0]}\n` +
+      `*commit:* \`${commitSha}\``;
+  } else {
+    const list = items.map((it, i) => `${i + 1}. ${it}`).join("\n");
+    message =
+      `✅ ${items.length}개 액션 기록됨\n` +
+      `*host:* ${host || "_(미지정)_"}\n` +
+      `*내용:*\n${list}\n` +
+      `*commit:* \`${commitSha}\``;
+  }
+
+  return { host, content, commitSha, items, message };
 }
 
 // 슬래시 커맨드 wrapper.
@@ -249,8 +294,16 @@ function buildAppliedActionModal({ channelId, threadTs, prefillHost }) {
           multiline: true,
           placeholder: {
             type: "plain_text",
-            text: "예: hero 배너 WebP 변환 + fetchpriority='high' 적용 (LCP 단축 목적)",
+            text:
+              "예시 (한 번에 여러 개 가능):\n" +
+              "hero 배너 WebP 변환 (LCP)\n" +
+              "vendor.js 코드 스플리팅 + defer (TBT)",
           },
+        },
+        hint: {
+          type: "plain_text",
+          text:
+            "줄바꿈 = 새 액션. 한 액션의 부연 설명은 줄 앞에 공백/탭 들여쓰기로 이어쓰기.",
         },
       },
     ],
