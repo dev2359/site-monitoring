@@ -15,9 +15,12 @@
  *
  * 환경변수:
  *   NOTION_TOKEN              (필수) — ntn_... 또는 secret_...
- *   NOTION_WEEKLY_DB_ID       (권장) — Master DB ID
+ *   NOTION_WEEKLY_DB_ID       (권장) — Master DB ID (주차별 archive)
  *   NOTION_PARENT_PAGE_ID     (호환) — 기존 secret 이름. 위 변수 없으면 fallback 으로 사용
  *                              (값은 이제 page ID 가 아니라 *DB ID* 여야 함)
+ *   NOTION_CURRENT_DB_ID      (옵션) — Current DB ID. 설정 시 (Device, URL) 키로 upsert 추가 실행.
+ *                              사용자가 노션에서 한 번 정렬/필터/메모 셋업 → 영구 유지
+ *   NOTION_ARCHIVE_STALE      (옵션) — "true" 면 Current DB 에 있지만 새 CSV 에 없는 row 를 archive
  *   NOTION_CSV_PATH           (옵션) — 기본 results/compare-wow.csv
  *   NOTION_ROW_TITLE          (옵션) — 기본 "📊 {YYYY-MM-DD} Weekly"
  *
@@ -29,8 +32,12 @@ const fs = require("fs");
 const path = require("path");
 
 const TOKEN = process.env.NOTION_TOKEN || "";
-// secret 이름 NOTION_WEEKLY_DB_ID > NOTION_PARENT_PAGE_ID 순으로 평가 — 둘 다 같은 값(DB ID).
+// Master DB (주차별 archive) — secret 이름 NOTION_WEEKLY_DB_ID > NOTION_PARENT_PAGE_ID 순.
 const DB_ID = process.env.NOTION_WEEKLY_DB_ID || process.env.NOTION_PARENT_PAGE_ID || "";
+// Current DB (최신 79 rows upsert) — 설정 시에만 동기화.
+const CURRENT_DB_ID = process.env.NOTION_CURRENT_DB_ID || "";
+const ARCHIVE_STALE =
+  String(process.env.NOTION_ARCHIVE_STALE || "false").toLowerCase() === "true";
 const CSV_PATH = process.env.NOTION_CSV_PATH || path.join("results", "compare-wow.csv");
 
 const NOTION_API = "https://api.notion.com/v1";
@@ -83,25 +90,59 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// 노션 백엔드의 일시 장애 (5xx, 429, 네트워크 에러) 시 exponential backoff 로 최대 3 회 재시도.
+// 4xx (429 제외) 는 즉시 fail — 재시도해도 의미 없음.
+const MAX_RETRIES = 3;
 async function notionFetch(method, url, body) {
-  const res = await fetch(`${NOTION_API}${url}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let json = null;
-  try {
-    json = JSON.parse(text);
-  } catch {}
-  if (!res.ok) {
+  let lastErr;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let res;
+    try {
+      res = await fetch(`${NOTION_API}${url}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Notion-Version": NOTION_VERSION,
+          "Content-Type": "application/json",
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (netErr) {
+      // 네트워크 에러 (DNS, 연결 실패 등) — retry 대상
+      lastErr = netErr;
+      if (attempt < MAX_RETRIES) {
+        const backoff = 500 * Math.pow(3, attempt); // 500ms → 1500ms → 4500ms
+        console.warn(`   ⏳ network error, retry ${attempt + 1}/${MAX_RETRIES} in ${backoff}ms — ${netErr.message}`);
+        await sleep(backoff);
+        continue;
+      }
+      throw netErr;
+    }
+
+    const text = await res.text();
+    let json = null;
+    try {
+      json = JSON.parse(text);
+    } catch {}
+
+    if (res.ok) return json;
+
+    // retry 대상: 5xx 또는 429 (rate limit)
+    const retriable = res.status >= 500 || res.status === 429;
+    if (retriable && attempt < MAX_RETRIES) {
+      const backoff = 500 * Math.pow(3, attempt);
+      console.warn(
+        `   ⏳ Notion ${res.status}, retry ${attempt + 1}/${MAX_RETRIES} in ${backoff}ms — ${url}`
+      );
+      await sleep(backoff);
+      lastErr = new Error(`Notion ${method} ${url} ${res.status}: ${text.slice(0, 200)}`);
+      continue;
+    }
+
+    // 4xx (429 제외) 또는 재시도 횟수 초과 — 즉시 fail
     throw new Error(`Notion ${method} ${url} ${res.status}: ${text.slice(0, 300)}`);
   }
-  return json;
+  throw lastErr || new Error(`Notion ${method} ${url} 재시도 초과`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,6 +345,94 @@ async function insertRow(databaseId, row) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 5) Current DB upsert — 매주 같은 (Device, URL) row 값만 갱신해 "현재 상태" 유지.
+//    Master DB(주차별 archive) 와 schema 동일. Status 컬럼은 Notion Formula 라 코드에서 안 보냄.
+async function queryAllPages(dbId) {
+  const all = [];
+  let cursor;
+  while (true) {
+    const body = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+    const json = await notionFetch("POST", `/databases/${dbId}/query`, body);
+    for (const r of json.results || []) all.push(r);
+    if (json.has_more && json.next_cursor) cursor = json.next_cursor;
+    else break;
+  }
+  return all;
+}
+
+function extractKey(page) {
+  const props = page.properties || {};
+  const url = props["URL"]?.title?.[0]?.plain_text || "";
+  const device = props["Device"]?.select?.name || "";
+  return `${device}|${url}`;
+}
+
+async function upsertCurrentDb(dbId, rows) {
+  console.log(`\n🔄 Current DB upsert 시작: ${dbId}`);
+  const existing = await queryAllPages(dbId);
+  console.log(`   기존 page: ${existing.length}`);
+
+  const byKey = new Map();
+  for (const p of existing) byKey.set(extractKey(p), p);
+
+  let created = 0,
+    updated = 0,
+    failed = 0;
+  const seenKeys = new Set();
+
+  for (const row of rows) {
+    const key = `${row.device}|${row.url}`;
+    seenKeys.add(key);
+    const props = buildRowProperties(row);
+    const existingPage = byKey.get(key);
+
+    try {
+      if (existingPage) {
+        await notionFetch("PATCH", `/pages/${existingPage.id}`, { properties: props });
+        updated++;
+      } else {
+        await notionFetch("POST", `/pages`, {
+          parent: { database_id: dbId },
+          properties: props,
+        });
+        created++;
+      }
+    } catch (e) {
+      console.error(`   ❌ ${key} — ${e.message}`);
+      failed++;
+    }
+    await sleep(350);
+  }
+
+  // stale: 새 CSV 에 없는 기존 row. NOTION_ARCHIVE_STALE=true 일 때만 archive.
+  const staleKeys = [...byKey.keys()].filter((k) => !seenKeys.has(k));
+  let archived = 0;
+  if (ARCHIVE_STALE && staleKeys.length > 0) {
+    console.log(`   🗑 stale row ${staleKeys.length}개 archive...`);
+    for (const key of staleKeys) {
+      try {
+        await notionFetch("PATCH", `/pages/${byKey.get(key).id}`, { archived: true });
+        archived++;
+      } catch (e) {
+        console.error(`   ❌ archive ${key} — ${e.message}`);
+        failed++;
+      }
+      await sleep(350);
+    }
+  }
+
+  const staleNote = ARCHIVE_STALE
+    ? `archived=${archived}`
+    : `stale 유지=${staleKeys.length}`;
+  console.log(
+    `✅ Current DB upsert 완료: created=${created}, updated=${updated}, ${staleNote}, failed=${failed}`
+  );
+
+  return failed;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // compare-wow.md 헤더의 "Past (~7d ago, latest-per-day): 2026-05-19-110504" 에서 past 라벨 추출
 function readPastLabelFromMd() {
   const mdPath = CSV_PATH.replace(/\.csv$/, ".md");
@@ -389,11 +518,24 @@ async function main() {
   }
 
   console.log(
-    `\n✅ Notion sync 완료: row "${title}", rows inserted=${ok}, failed=${failed}, ` +
+    `\n✅ Master DB sync 완료: row "${title}", rows inserted=${ok}, failed=${failed}, ` +
       `regressions=${regressions.length}, improvements=${improvements.length}`
   );
 
-  if (failed > 0) process.exit(1);
+  // Current DB (최신 79 rows 유지) 가 설정돼 있으면 추가 upsert.
+  let currentFailed = 0;
+  if (CURRENT_DB_ID) {
+    try {
+      currentFailed = await upsertCurrentDb(CURRENT_DB_ID, rows);
+    } catch (e) {
+      console.error(`❌ Current DB upsert 실패: ${e.message}`);
+      currentFailed = 1; // 실패 마킹
+    }
+  } else {
+    console.log(`\nℹ️ NOTION_CURRENT_DB_ID 미설정 — Current DB upsert skip`);
+  }
+
+  if (failed > 0 || currentFailed > 0) process.exit(1);
 }
 
 main().catch((e) => {

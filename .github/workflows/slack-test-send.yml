@@ -97,6 +97,7 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+          NOTION_CURRENT_DB_ID: ${{ secrets.NOTION_CURRENT_DB_ID }}
 
       - name: Upload artifacts for inspection
         if: always()

@@ -52,7 +52,7 @@
 
 ### 노션 동기화
 
-- `sync-notion.js`: 매주 Lighthouse 실행 후 `results/compare-wow.csv` 를 노션 **Master DB** 에 한 row 추가하고, 그 row 의 detail page 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline DB, 11 컬럼) 자동 생성. Master DB 컬럼 (Date / Regressions / Improvements / Total URLs / Past Snapshot) 으로 주차별 sort/filter 가능. Status 는 노션 Formula 로 Perf Δ 기준 🚨 / ✅ / ➖ 자동 분류
+- `sync-notion.js`: 매주 Lighthouse 실행 후 `results/compare-wow.csv` 를 노션에 push. **두 DB 분담** — (a) **Master DB** 에 한 row 추가하고 그 row 의 detail page 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline DB, 11 컬럼) 생성 (주차별 archive), (b) `NOTION_CURRENT_DB_ID` 등록 시 **Current DB** 에 (URL, Device) 키로 upsert (항상 최신 79 rows, 사용자 view 영구 유지). Status 는 노션 Formula 로 Perf Δ 기준 🚨 / ✅ / ➖ 자동 분류
 
 ### 데이터
 
@@ -95,6 +95,7 @@ Job 구성:
 - (선택) `RAILWAY_HEALTH_URL`: `railway-healthcheck.yml` 이 ping 하는 URL. 예: `https://<service>.up.railway.app/health`. 미설정 시 헬스체크 워크플로가 실패하므로, slack-applied-action 서비스를 운영한다면 등록 권장
 - (선택) `NOTION_TOKEN`: Notion Internal Integration Token. `ntn_...` 또는 `secret_...` 둘 다 가능. `sync-notion.js` 가 호출. 미설정이면 노션 sync step 자동 skip
 - (선택) `NOTION_WEEKLY_DB_ID` (권장) / `NOTION_PARENT_PAGE_ID` (호환): Master DB ID. 사용자가 만든 DB 를 integration 에 share 한 뒤 DB ID 등록. 매주 워크플로가 이 DB 에 한 row 추가, 그 row 의 detail page 안에 `📊 YYYY-MM-DD Weekly` sub-DB 자동 생성. 두 secret 이름 모두 인식 (`NOTION_WEEKLY_DB_ID` 우선)
+- (선택) `NOTION_CURRENT_DB_ID`: Current DB ID. 설정 시 매주 같은 (URL, Device) row 를 upsert — 항상 최신 79 rows 유지. 사용자가 노션에서 정렬/필터/메모 한 번 셋업하면 영구 보존
 - `GITHUB_TOKEN`: 기본 제공 토큰 사용, 별도 설정 불필요 (history 자동 커밋용)
 
 ### Railway (`slack-applied-action`) 서비스 환경변수
@@ -151,6 +152,34 @@ Master DB: Weekly Snapshots
 ```
 
 > ⚠️ 매주 새 inline DB 가 생성되므로, 노션에서 컬럼 type 을 수동 수정해도 다음 주 새 DB 에는 적용 안 됨. schema 변경이 필요하면 [sync-notion.js](sync-notion.js) 의 `createInlineDatabase()` 를 수정.
+
+#### (선택) Current DB — 최신 상태만 upsert
+
+Master DB 의 inline DB 는 매주 새로 만들어지므로 사용자 정렬/필터/메모가 보존되지 않습니다.
+별도로 *항상 최신 79 rows 만* 유지하는 Current DB 를 두면 한 번 셋업한 view 가 영구 유지됩니다.
+
+1. **새 DB 생성** — 이름 예: `Latest URLs Snapshot`
+2. **컬럼 셋업** — Master 의 inline DB 와 같은 schema:
+
+   | 컬럼 | Type | 비고 |
+   |---|---|---|
+   | URL | Title | (자동 감지) |
+   | Device | Select | mobile / desktop |
+   | Host | Select | |
+   | Status | Formula | `if(prop("Perf Δ") <= -5, "🚨 회귀", if(prop("Perf Δ") >= 5, "✅ 개선", "➖ 유지"))` |
+   | Perf Now / Perf Δ / LCP Now / LCP Δ / CLS Now | Number | |
+   | Trend (8w) / Path | Text (rich_text) | |
+
+3. **Integration 권한** 추가
+4. **GitHub Secret** `NOTION_CURRENT_DB_ID` = 새 DB ID 등록
+
+이후 매주 워크플로가:
+- Master DB 에 row 추가 (archive)
+- Current DB 의 (URL, Device) row 를 query → 있으면 update, 없으면 create
+
+→ 한 번 노션에서 정렬/필터/Group by Host 같은 view 셋업하면 매주 그대로 유지됨. 사용자가 row 옆에 단 메모/커스텀 컬럼도 보존됨.
+
+(옵션) `NOTION_ARCHIVE_STALE=true` env 면 새 CSV 에 없는 기존 Current DB row 를 자동 archive. 기본은 안전하게 유지.
 
 ### Slack App 설정 요약
 
