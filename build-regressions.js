@@ -18,7 +18,7 @@ const path = require("path");
 
 const IN_CSV = process.env.IN_CSV || path.join("results", "compare-wow.csv");
 const OUT_MD = process.env.OUT_MD || path.join("results", "regressions-wow.md");
-const REGRESSION_THRESHOLD = parseInt(process.env.REGRESSION_THRESHOLD || "-10", 10);
+const REGRESSION_THRESHOLD = parseInt(process.env.REGRESSION_THRESHOLD || "-5", 10);
 const TITLE = process.env.TITLE || "⚠️ Week-over-Week Regressions";
 const WINDOW_LABEL = process.env.WINDOW_LABEL || "지난 주 대비";
 

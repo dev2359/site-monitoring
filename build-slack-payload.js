@@ -18,8 +18,8 @@ const OUT_PATH = path.join("results", "slack-payload.json");
 
 const TOP_N_PER_DEVICE = 3; // 출력 개수
 const DEFAULT_THRESHOLDS = { warn: 0.8, crit: 0.6 }; // Perf 기준
-const REGRESSION_DELTA = -10; // WoW 회귀 기준
-const IMPROVEMENT_DELTA = 10; // WoW 개선 기준
+const REGRESSION_DELTA = -5; // WoW 회귀 기준
+const IMPROVEMENT_DELTA = 5; // WoW 개선 기준
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -189,7 +189,7 @@ function shortenUrl(u) {
   }
 }
 
-// WoW CSV 의 perf_delta 컬럼을 스캔해 회귀(<=-10) / 개선(>=+10) 개수를 센다.
+// WoW CSV 의 perf_delta 컬럼을 스캔해 회귀(<=-5) / 개선(>=+5) 개수를 센다.
 function readWowCounts(csvPath) {
   if (!fs.existsSync(csvPath)) return null;
   const lines = fs.readFileSync(csvPath, "utf-8").split(/\r?\n/).filter(Boolean);

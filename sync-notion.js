@@ -1,17 +1,27 @@
 /**
  * sync-notion.js
  *
- * 매주 Lighthouse 실행 후 Notion 의 parent page 안에 *주간 sub-page* 를 생성하고,
- * 그 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline database, 79 rows) 을 채운다.
+ * 매주 Lighthouse 실행 후 Notion *Master DB* 에 1 row 생성하고, 그 row 의 detail page 안에
+ * ⚠️ Regressions 요약 + 📊 Full Table (inline database, 79 rows) 를 채운다.
+ *
+ * Master DB 권장 schema (정확한 컬럼명):
+ *   Title (Title)        — push 시 "📊 YYYY-MM-DD Weekly" 자동 입력 (실제 컬럼명은 자동 감지)
+ *   Date (Date)
+ *   Regressions (Number)
+ *   Improvements (Number)
+ *   Total URLs (Number)
+ *   Past Snapshot (Text / rich_text)
+ * → 누락된 컬럼은 best-effort 로 skip (warning).
  *
  * 환경변수:
  *   NOTION_TOKEN              (필수) — ntn_... 또는 secret_...
- *   NOTION_PARENT_PAGE_ID     (필수) — 사용자가 만든 빈 페이지의 ID (32자 hex, dash 포함 OK).
- *                              이 페이지를 integration 에 share 해 두어야 함.
+ *   NOTION_WEEKLY_DB_ID       (권장) — Master DB ID
+ *   NOTION_PARENT_PAGE_ID     (호환) — 기존 secret 이름. 위 변수 없으면 fallback 으로 사용
+ *                              (값은 이제 page ID 가 아니라 *DB ID* 여야 함)
  *   NOTION_CSV_PATH           (옵션) — 기본 results/compare-wow.csv
- *   NOTION_SUBPAGE_TITLE      (옵션) — 기본 "📊 {YYYY-MM-DD} Weekly Snapshot"
+ *   NOTION_ROW_TITLE          (옵션) — 기본 "📊 {YYYY-MM-DD} Weekly"
  *
- * Notion API rate limit ~3 req/s. 82 reqs (sub-page + blocks + DB + 79 rows) → ~30초.
+ * Notion API rate limit ~3 req/s. ~83 reqs (schema + row + blocks + inline DB + 79 rows) → ~30초.
  * Node 18+
  */
 
@@ -19,14 +29,15 @@ const fs = require("fs");
 const path = require("path");
 
 const TOKEN = process.env.NOTION_TOKEN || "";
-const PARENT_PAGE_ID = process.env.NOTION_PARENT_PAGE_ID || "";
+// secret 이름 NOTION_WEEKLY_DB_ID > NOTION_PARENT_PAGE_ID 순으로 평가 — 둘 다 같은 값(DB ID).
+const DB_ID = process.env.NOTION_WEEKLY_DB_ID || process.env.NOTION_PARENT_PAGE_ID || "";
 const CSV_PATH = process.env.NOTION_CSV_PATH || path.join("results", "compare-wow.csv");
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-const REGRESSION_DELTA = -10; // build-slack-payload.js 와 일치
-const IMPROVEMENT_DELTA = 10;
+const REGRESSION_DELTA = -5; // build-slack-payload.js 와 일치
+const IMPROVEMENT_DELTA = 5;
 
 function exitErr(msg) {
   console.error("❌", msg);
@@ -34,7 +45,7 @@ function exitErr(msg) {
 }
 
 if (!TOKEN) exitErr("NOTION_TOKEN 미설정");
-if (!PARENT_PAGE_ID) exitErr("NOTION_PARENT_PAGE_ID 미설정");
+if (!DB_ID) exitErr("NOTION_WEEKLY_DB_ID 또는 NOTION_PARENT_PAGE_ID 미설정 (값은 Master DB ID 여야 함)");
 if (!fs.existsSync(CSV_PATH))
   exitErr(`${CSV_PATH} 가 없음 — build-3m-table.js 먼저 실행 필요`);
 
@@ -94,13 +105,56 @@ async function notionFetch(method, url, body) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1) 주간 sub-page 생성
-async function createWeeklySubPage(title) {
+// 1) Master DB schema 조회 — title property 이름 동적 감지 + 옵션 컬럼 존재 여부 확인.
+async function fetchDbSchema(dbId) {
+  return await notionFetch("GET", `/databases/${dbId}`);
+}
+
+// schema 안에서 type === 'title' 인 property 이름 찾기 (Notion DB 는 정확히 1개).
+function findTitlePropertyName(schema) {
+  const props = schema.properties || {};
+  for (const [name, prop] of Object.entries(props)) {
+    if (prop.type === "title") return name;
+  }
+  throw new Error("Master DB 에 title type property 가 없음");
+}
+
+// 1) Master DB 에 한 주차 row(page) 생성. metadata 컬럼들은 schema 에 있을 때만 채움 (없으면 skip).
+async function createWeeklyDbRow(dbId, schema, titleProp, meta) {
+  const properties = {
+    [titleProp]: { title: [{ text: { content: meta.title } }] },
+  };
+
+  const schemaProps = schema.properties || {};
+  const setIfExists = (name, type, value) => {
+    if (!schemaProps[name] || schemaProps[name].type !== type) return false;
+    if (type === "date") properties[name] = { date: { start: value } };
+    else if (type === "number") properties[name] = { number: value };
+    else if (type === "rich_text")
+      properties[name] = { rich_text: [{ text: { content: value ?? "" } }] };
+    return true;
+  };
+
+  const optional = [
+    ["Date", "date", meta.dateIso],
+    ["Regressions", "number", meta.regressions],
+    ["Improvements", "number", meta.improvements],
+    ["Total URLs", "number", meta.total],
+    ["Past Snapshot", "rich_text", meta.pastLabel || ""],
+  ];
+
+  const missing = [];
+  for (const [name, type, value] of optional) {
+    const ok = setIfExists(name, type, value);
+    if (!ok) missing.push(`${name}(${type})`);
+  }
+  if (missing.length > 0) {
+    console.warn(`⚠️ Master DB 에 다음 컬럼 누락/타입 불일치 — skip: ${missing.join(", ")}`);
+  }
+
   return await notionFetch("POST", "/pages", {
-    parent: { page_id: PARENT_PAGE_ID },
-    properties: {
-      title: { title: [{ text: { content: title } }] },
-    },
+    parent: { database_id: dbId },
+    properties,
   });
 }
 
@@ -184,6 +238,8 @@ async function appendBlocks(pageId, children) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3) sub-page 안에 inline database 생성 (schema 정의)
+// 컬럼 정의 순서가 새 DB 의 default 컬럼 순서가 됨 (Title 은 항상 가장 왼쪽).
+// 자주 보는 정보 → 부가 정보 순으로: URL · Device · Host · Status · Perf · LCP · CLS · Trend · Path
 async function createInlineDatabase(parentPageId) {
   const properties = {
     URL: { title: {} },
@@ -196,20 +252,20 @@ async function createInlineDatabase(parentPageId) {
       },
     },
     Host: { select: {} },
-    Path: { rich_text: {} },
-    "Trend (8w)": { rich_text: {} },
+    Status: {
+      formula: {
+        // Perf Δ 기준 자동 분류 — Notion 안에서 임계값 튜닝 가능 (수동 수정 시 다음 주 새 DB 에는 미적용)
+        expression:
+          'if(prop("Perf Δ") <= -5, "🚨 회귀", if(prop("Perf Δ") >= 5, "✅ 개선", "➖ 유지"))',
+      },
+    },
     "Perf Now": { number: { format: "number" } },
     "Perf Δ": { number: { format: "number" } },
     "LCP Now": { number: { format: "number" } },
     "LCP Δ": { number: { format: "number" } },
     "CLS Now": { number: { format: "number" } },
-    Status: {
-      formula: {
-        // Perf Δ 기준 자동 분류 — Notion 안에서 임계값 튜닝 가능 (수동 수정 시 다음 주 새 DB 에는 미적용)
-        expression:
-          'if(prop("Perf Δ") <= -10, "🚨 회귀", if(prop("Perf Δ") >= 10, "✅ 개선", "➖ 유지"))',
-      },
-    },
+    "Trend (8w)": { rich_text: {} },
+    Path: { rich_text: {} },
   };
 
   return await notionFetch("POST", "/databases", {
@@ -281,42 +337,59 @@ async function main() {
 
   const today = new Date().toISOString().slice(0, 10);
   const title =
-    process.env.NOTION_SUBPAGE_TITLE || `📊 ${today} Weekly Snapshot`;
+    process.env.NOTION_ROW_TITLE ||
+    process.env.NOTION_SUBPAGE_TITLE ||  // 이전 이름도 호환
+    `📊 ${today} Weekly`;
 
-  console.log(`📝 sub-page 생성: "${title}"`);
-  const subPage = await createWeeklySubPage(title);
-  const subPageId = subPage.id;
-  console.log(`   sub-page id: ${subPageId}`);
+  console.log(`🔍 Master DB schema 조회: ${DB_ID}`);
+  const schema = await fetchDbSchema(DB_ID);
+  const titleProp = findTitlePropertyName(schema);
+  console.log(`   title property: "${titleProp}"`);
   await sleep(350);
 
-  console.log(`📌 본문 blocks 추가 (regressions=${regressions.length})...`);
+  const meta = {
+    title,
+    dateIso: today,
+    regressions: regressions.length,
+    improvements: improvements.length,
+    total: rows.length,
+    pastLabel,
+  };
+
+  console.log(`📝 Master DB row 생성: "${title}"`);
+  const row = await createWeeklyDbRow(DB_ID, schema, titleProp, meta);
+  const rowPageId = row.id;
+  console.log(`   row page id: ${rowPageId}`);
+  await sleep(350);
+
+  console.log(`📌 row detail 본문 blocks 추가 (regressions=${regressions.length})...`);
   await appendBlocks(
-    subPageId,
+    rowPageId,
     buildIntroBlocks(rows.length, regressions, improvements, pastLabel)
   );
   await sleep(350);
 
-  console.log(`📊 inline database 생성...`);
-  const db = await createInlineDatabase(subPageId);
-  console.log(`   database id: ${db.id}`);
+  console.log(`📊 inline database (Full Table) 생성...`);
+  const detailDb = await createInlineDatabase(rowPageId);
+  console.log(`   inline database id: ${detailDb.id}`);
   await sleep(350);
 
   console.log(`📥 ${rows.length} rows insert 시작 (~${Math.ceil(rows.length * 0.35)}초 소요)...`);
   let ok = 0,
     failed = 0;
-  for (const row of rows) {
+  for (const r of rows) {
     try {
-      await insertRow(db.id, row);
+      await insertRow(detailDb.id, r);
       ok++;
     } catch (e) {
-      console.error(`   ❌ ${row.device}|${row.url} — ${e.message}`);
+      console.error(`   ❌ ${r.device}|${r.url} — ${e.message}`);
       failed++;
     }
     await sleep(350);
   }
 
   console.log(
-    `\n✅ Notion sync 완료: sub-page "${title}", rows inserted=${ok}, failed=${failed}, ` +
+    `\n✅ Notion sync 완료: row "${title}", rows inserted=${ok}, failed=${failed}, ` +
       `regressions=${regressions.length}, improvements=${improvements.length}`
   );
 
