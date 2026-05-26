@@ -52,7 +52,7 @@
 
 ### 노션 동기화
 
-- `sync-notion.js`: 매주 Lighthouse 실행 후 `results/compare-wow.csv` 를 노션 parent page 의 *새 sub-page* 에 게시. sub-page 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline DB, 11 컬럼) 자동 생성. 주차별로 sub-page 가 누적되어 archive 형태. Status 컬럼은 노션 Formula 로 Perf Δ 기준 🚨 회귀 / ✅ 개선 / ➖ 유지 자동 분류
+- `sync-notion.js`: 매주 Lighthouse 실행 후 `results/compare-wow.csv` 를 노션 **Master DB** 에 한 row 추가하고, 그 row 의 detail page 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline DB, 11 컬럼) 자동 생성. Master DB 컬럼 (Date / Regressions / Improvements / Total URLs / Past Snapshot) 으로 주차별 sort/filter 가능. Status 는 노션 Formula 로 Perf Δ 기준 🚨 / ✅ / ➖ 자동 분류
 
 ### 데이터
 
@@ -94,7 +94,7 @@ Job 구성:
 - (선택) `SLACK_WEBHOOK_URL`: `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID` 미설정 시의 fallback. 이 모드는 스레드 분리 불가. **`railway-healthcheck.yml` 알림에도 재사용됨**
 - (선택) `RAILWAY_HEALTH_URL`: `railway-healthcheck.yml` 이 ping 하는 URL. 예: `https://<service>.up.railway.app/health`. 미설정 시 헬스체크 워크플로가 실패하므로, slack-applied-action 서비스를 운영한다면 등록 권장
 - (선택) `NOTION_TOKEN`: Notion Internal Integration Token. `ntn_...` 또는 `secret_...` 둘 다 가능. `sync-notion.js` 가 호출. 미설정이면 노션 sync step 자동 skip
-- (선택) `NOTION_PARENT_PAGE_ID`: 노션 parent page ID (32자 hex, dash 포함도 OK). 사용자가 빈 페이지를 만들고 integration 에 share 한 뒤 그 페이지 ID 등록. 매주 워크플로가 이 페이지 안에 `📊 YYYY-MM-DD Weekly Snapshot` sub-page 를 자동 생성
+- (선택) `NOTION_WEEKLY_DB_ID` (권장) / `NOTION_PARENT_PAGE_ID` (호환): Master DB ID. 사용자가 만든 DB 를 integration 에 share 한 뒤 DB ID 등록. 매주 워크플로가 이 DB 에 한 row 추가, 그 row 의 detail page 안에 `📊 YYYY-MM-DD Weekly` sub-DB 자동 생성. 두 secret 이름 모두 인식 (`NOTION_WEEKLY_DB_ID` 우선)
 - `GITHUB_TOKEN`: 기본 제공 토큰 사용, 별도 설정 불필요 (history 자동 커밋용)
 
 ### Railway (`slack-applied-action`) 서비스 환경변수
@@ -108,23 +108,49 @@ Job 구성:
 
 ### Notion 셋업 (선택)
 
-매주 노션에 주차별 sub-page 가 자동 생성되도록 하려면:
+매주 노션 Master DB 에 한 주차 row 가 자동 추가되도록:
 
 1. **Integration 생성**: https://www.notion.so/profile/integrations → "+ New integration" (Internal) → Save → **Internal Integration Secret** 복사 (`ntn_...` 또는 `secret_...`)
-2. **Parent page 생성**: 노션 워크스페이스의 적당한 위치에 빈 페이지 1개 (이름 예: `Site Monitoring Weekly`)
-3. **Integration 권한**: 그 페이지 우상단 `···` → **Connections** → 위 integration 추가
-4. **Page ID 복사**: 페이지 URL 의 마지막 32자 hex (dash 포함 형식도 OK)
+2. **Master DB 생성**: 노션에 새 데이터베이스 (full page 또는 inline) — 이름 예: `Weekly Snapshots`. 다음 컬럼 셋업:
+
+   | 컬럼 | Type | 비고 |
+   |---|---|---|
+   | (Title — 임의 이름) | Title | 코드가 자동 감지 |
+   | Date | Date | |
+   | Regressions | Number | |
+   | Improvements | Number | |
+   | Total URLs | Number | |
+   | Past Snapshot | Text (rich_text) | |
+
+   (Title 외 컬럼은 누락돼 있어도 skip + warning 으로 처리됨)
+
+3. **Integration 권한**: DB 우상단 `···` → **Connections** → 위 integration 추가
+4. **DB ID 복사**: DB URL 의 32자 hex (dash 포함 형식도 OK)
 5. **GitHub Secrets 등록**:
    - `NOTION_TOKEN` = 1단계의 token
-   - `NOTION_PARENT_PAGE_ID` = 4단계의 page ID
+   - `NOTION_WEEKLY_DB_ID` = 4단계의 DB ID (또는 기존 `NOTION_PARENT_PAGE_ID` 의 값으로 등록해도 OK — fallback 지원)
 
-이후 매주 lighthouse 실행 시 parent page 안에 `📊 YYYY-MM-DD Weekly Snapshot` sub-page 자동 생성. sub-page 내부:
+이후 매주 lighthouse 실행 시 Master DB 에 한 row 추가:
 
-- ⚠️ Regressions (perf Δ ≤ -10) 목록
-- ℹ️ 회귀/개선/총 URL 카운트 callout
-- 📊 Full Table (inline DB) — 11 컬럼: URL · Device · Host · Path · Trend(8w) · Perf Now/Δ · LCP Now/Δ · CLS Now · Status(Formula 자동)
+```
+Master DB: Weekly Snapshots
+┌───────────────────────────────────────────────────────────┐
+│ Title           │ Date  │ Reg │ Imp │ Total │ Past Snap  │
+├───────────────────────────────────────────────────────────┤
+│ 📊 2026-05-26 W │ 5/26  │  1  │ 11  │  79   │ 2026-05-19 │ ← click
+│ 📊 2026-05-19 W │ 5/19  │  3  │  2  │  79   │ 2026-05-12 │
+└───────────────────────────────────────────────────────────┘
+                            ↓
+              row detail page:
+              ├ ⚠️ Regressions (perf Δ ≤ -10) bulleted list
+              ├ ℹ️ 회귀/개선/총 URL 카운트 callout
+              └ 📊 Full Table (inline DB, 11 컬럼)
+                  URL · Device · Host · Path · Trend(8w)
+                  Perf Now/Δ · LCP Now/Δ · CLS Now
+                  Status (Formula 자동: 🚨 회귀 / ✅ 개선 / ➖ 유지)
+```
 
-> ⚠️ 매주 새 DB 가 생성되므로, 노션에서 컬럼 type 을 수동 수정해도 다음 주 새 DB 에는 적용 안 됨. schema 변경이 필요하면 [sync-notion.js](sync-notion.js) 의 `createInlineDatabase()` 를 수정.
+> ⚠️ 매주 새 inline DB 가 생성되므로, 노션에서 컬럼 type 을 수동 수정해도 다음 주 새 DB 에는 적용 안 됨. schema 변경이 필요하면 [sync-notion.js](sync-notion.js) 의 `createInlineDatabase()` 를 수정.
 
 ### Slack App 설정 요약
 
