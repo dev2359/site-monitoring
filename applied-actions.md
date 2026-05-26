@@ -46,3 +46,4 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-05-26] wellit.co.kr 메인 페이지, 상품 분류 페이지, 브랜드 소개 등 png나 jpg파일 등 일부 페이지 wepbp 파일 변환
 - [2026-05-26] curicell.kr promotion.js 파일 내부 불필요한 코드 제거 or 주석 처리(추후 사용할 수 있거나 히스토리가 명확하지 않은 코드는 주석)
 - [2026-05-26] curicell.kr 썸네일 제외 보이는 이미지들 webp로 변경
+- [2026-05-26] curicell.kr 중복으로 불러오는 font 수정 (2359.css의 @import로 구글 폰트 불러오는 부분 주석처리 -> layout에서 cdn 형식으로 불러오고 있어 중복으로 호출하고 있었음)
