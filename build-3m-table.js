@@ -200,6 +200,53 @@ function normalizeItems(summary) {
     .filter((r) => r.url);
 }
 
+// 한 snapshot 안에서 device 별로 LCP/CLS 가 모두 동일한 값이면 — 과거 LHCI placeholder 버그
+// (2026-05-19 이전) 같은 *수집 단계 collapse* 흔적으로 간주해 그 device 의 metric 을 invalid 로 마킹.
+// 마킹된 metric 은 표/CSV 에서 `—` 로 표시되고 delta 계산도 skip — 노이즈 노출 방지.
+function detectCollapsedMetrics(rows) {
+  const invalid = { mobile: { lcp: false, cls: false }, desktop: { lcp: false, cls: false } };
+  for (const dev of ["mobile", "desktop"]) {
+    const arr = rows.filter((r) => r.device === dev);
+    if (arr.length < 3) continue;
+    for (const m of ["lcpMs", "cls"]) {
+      const vals = arr.map((r) => r[m]).filter((v) => typeof v === "number");
+      if (vals.length < 3) continue;
+      const unique = new Set(vals.map((v) => v.toFixed(6))).size;
+      if (unique === 1) {
+        invalid[dev][m === "lcpMs" ? "lcp" : "cls"] = true;
+      }
+    }
+  }
+  return invalid;
+}
+
+// invalid 마킹된 metric 은 null 로 치환 — 후속 delta 계산은 자연스럽게 skip 됨.
+function applyInvalidMask(rows, invalid, label) {
+  let masked = 0;
+  for (const r of rows) {
+    const inv = invalid[r.device];
+    if (!inv) continue;
+    if (inv.lcp && typeof r.lcpMs === "number") {
+      r.lcpMs = null;
+      masked++;
+    }
+    if (inv.cls && typeof r.cls === "number") {
+      r.cls = null;
+      masked++;
+    }
+  }
+  if (masked > 0) {
+    const dets = [];
+    for (const dev of ["mobile", "desktop"]) {
+      if (invalid[dev].lcp) dets.push(`${dev}.lcp`);
+      if (invalid[dev].cls) dets.push(`${dev}.cls`);
+    }
+    console.warn(
+      `⚠️ [${label}] collapsed metric 감지 (${dets.join(", ")}) — 해당 컬럼 값 ${masked}개를 null 처리.`
+    );
+  }
+}
+
 function indexByKey(rows) {
   const m = new Map();
   for (const r of rows) m.set(r.key, r);
@@ -214,6 +261,8 @@ function main() {
 
   const nowSummary = readJson(NOW_PATH);
   const nowRows = normalizeItems(nowSummary);
+  const nowInvalid = detectCollapsedMetrics(nowRows);
+  applyInvalidMask(nowRows, nowInvalid, "now");
   const nowIdx = indexByKey(nowRows);
 
   const entries = listHistoryLatestPerDay();
@@ -236,6 +285,8 @@ function main() {
       try {
         const pastSummary = readJson(pastPath);
         const pastRows = normalizeItems(pastSummary);
+        const pastInvalid = detectCollapsedMetrics(pastRows);
+        applyInvalidMask(pastRows, pastInvalid, `past ${pastEntry.isoKey}`);
         pastIdx = indexByKey(pastRows);
         hasPast = pastRows.length > 0;
         pastLabel = pastEntry.isoKey;
@@ -317,13 +368,17 @@ function main() {
     const bpCell = `${r.bp_past ?? ""}→${r.bp_now ?? ""} (${r.bp_delta ?? ""})`;
     const seoCell = `${r.seo_past ?? ""}→${r.seo_now ?? ""} (${r.seo_delta ?? ""})`;
 
-    const lcpCell =
-      `${msToSec(r.lcp_past_ms)}→${msToSec(r.lcp_now_ms)} ` +
-      `(${r.lcp_delta_ms == null ? "" : (r.lcp_delta_ms / 1000).toFixed(2)})`;
+    // LCP/CLS 가 collapsed 로 invalid 처리되면 (null) `—` 표시 + delta 도 빈 칸.
+    const lcpPastStr = r.lcp_past_ms == null ? "—" : msToSec(r.lcp_past_ms);
+    const lcpNowStr = r.lcp_now_ms == null ? "—" : msToSec(r.lcp_now_ms);
+    const lcpDeltaStr =
+      r.lcp_delta_ms == null ? "" : (r.lcp_delta_ms / 1000).toFixed(2);
+    const lcpCell = `${lcpPastStr}→${lcpNowStr} (${lcpDeltaStr})`;
 
-    const clsCell =
-      `${fmtNum(r.cls_past, 3)}→${fmtNum(r.cls_now, 3)} ` +
-      `(${r.cls_delta == null ? "" : r.cls_delta.toFixed(3)})`;
+    const clsPastStr = r.cls_past == null ? "—" : fmtNum(r.cls_past, 3);
+    const clsNowStr = r.cls_now == null ? "—" : fmtNum(r.cls_now, 3);
+    const clsDeltaStr = r.cls_delta == null ? "" : r.cls_delta.toFixed(3);
+    const clsCell = `${clsPastStr}→${clsNowStr} (${clsDeltaStr})`;
 
     const trendCell = r.trend ? `\`${r.trend}\`` : "";
 
