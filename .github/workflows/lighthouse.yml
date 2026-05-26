@@ -235,6 +235,16 @@ jobs:
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
+      # 노션 sync — secret 두 개 다 등록돼 있을 때만 시도. 실패해도 워크플로 실패로 잡지 않음
+      # (Slack/측정/history 커밋은 이미 끝난 후라 노션 일시 장애로 전체 fail 처리할 가치 ↓).
+      - name: Sync to Notion (best-effort)
+        if: env.NOTION_TOKEN != '' && env.NOTION_PARENT_PAGE_ID != ''
+        continue-on-error: true
+        run: node sync-notion.js
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+
       - name: Upload Summary + AI + Slack payload
         uses: actions/upload-artifact@v4
         with:

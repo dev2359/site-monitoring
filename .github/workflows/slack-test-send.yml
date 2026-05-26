@@ -2,6 +2,15 @@ name: Slack Test Send (skip measurements)
 
 on:
   workflow_dispatch:
+    inputs:
+      sync_notion:
+        description: "노션 DB 동기화 여부 (기본 false — 테스트 데이터로 노션 더럽힘 방지)"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: read
@@ -79,6 +88,15 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # 테스트 워크플로는 기본 노션 sync 안 함 (input 으로 명시적으로 켰을 때만).
+      - name: Sync to Notion (opt-in)
+        if: inputs.sync_notion == 'true'
+        continue-on-error: true
+        run: node sync-notion.js
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
 
       - name: Upload artifacts for inspection
         if: always()

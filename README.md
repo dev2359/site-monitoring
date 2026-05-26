@@ -50,6 +50,10 @@
 - `applied-actions.md`: 매주 적용한 개선 액션을 한 줄씩 기록. **두 가지 경로**로 갱신됨 — (a) 사용자가 직접 PR/커밋, (b) Slack `/applied-action` 슬래시 커맨드 또는 Message Shortcut → `slack-applied-action/` 서비스 → GitHub Contents API 로 자동 커밋. AI 제안의 신선도 유지 + 효과 검증 유도
 - `slack-applied-action/`: Slack `/applied-action` 슬래시 커맨드 + Message Shortcut("Applied Action 기록") 핸들러. **Railway 별도 서비스로 배포**. 상세는 [slack-applied-action/README.md](slack-applied-action/README.md)
 
+### 노션 동기화
+
+- `sync-notion.js`: 매주 Lighthouse 실행 후 `results/compare-wow.csv` 를 노션 parent page 의 *새 sub-page* 에 게시. sub-page 안에 ⚠️ Regressions 요약 + 📊 Full Table (inline DB, 11 컬럼) 자동 생성. 주차별로 sub-page 가 누적되어 archive 형태. Status 컬럼은 노션 Formula 로 Perf Δ 기준 🚨 회귀 / ✅ 개선 / ➖ 유지 자동 분류
+
 ### 데이터
 
 - `history/*.json`: 실행별 스냅샷 아카이브 (워크플로가 자동 커밋)
@@ -67,11 +71,11 @@ Job 구성:
 
 1. `lighthouse_desktop` — Desktop LHCI 측정
 2. `lighthouse_mobile` — Mobile LHCI 측정
-3. `summarize_and_notify` (위 2개 완료 후 실행) — 요약 / 3개월 비교 / WoW 비교 / 회귀 보고서 / AI 분석 + 제안 / Slack 발송 / history 커밋
+3. `summarize_and_notify` (위 2개 완료 후 실행) — 요약 / 3개월 비교 / WoW 비교 / 회귀 보고서 / AI 분석 + 제안 / Slack 발송 / 노션 sync (secret 등록 시) / history 커밋
 
 ### GitHub Actions — 운영 유틸
 
-- `slack-test-send.yml` (`workflow_dispatch`): 마지막 history 스냅샷 → `results/summary.json` 시드 → `regenerate-ai-input.js` → 비교/회귀/AI/페이로드 → Slack 발송. **Lighthouse 측정을 안 거치므로 1~2분 안에 끝남**. 리포트 포맷 검증/리허설용
+- `slack-test-send.yml` (`workflow_dispatch`): 마지막 history 스냅샷 → `results/summary.json` 시드 → `regenerate-ai-input.js` → 비교/회귀/AI/페이로드 → Slack 발송. **Lighthouse 측정을 안 거치므로 1~2분 안에 끝남**. 리포트 포맷 검증/리허설용. 노션 sync 는 기본 skip — `sync_notion=true` input 으로 명시적으로 켤 수 있음 (테스트 데이터로 노션 archive 더럽힘 방지)
 - `slack-delete.yml` (`workflow_dispatch`): 입력받은 ts 의 봇 메시지를 삭제. 콤마/공백으로 메인 ts + thread ts 등 다중 입력 가능. ts 는 `slack-test-send.yml` 실행 로그의 `main posted (ts=...)` / `thread reply posted (ts=...)` 라인에서 확인
 - `railway-healthcheck.yml` (스케줄 + 수동): 매일 1회 Railway `/health` 호출. 실패 시 Slack 으로 "🚨 액션 기록 누락 위험" 알림. Secret `RAILWAY_HEALTH_URL` 필요
 - `history-compact.yml` (스케줄 + 수동, **기본 dry-run**): 매주 월요일 `compact-history.js` 실행. dry-run 모드는 어떤 파일이 삭제될지 Job Summary 에만 표시 — 결과 확인 후 수동으로 `dry_run=false` 선택해 실제 삭제 수행
@@ -89,6 +93,8 @@ Job 구성:
 - `SLACK_CHANNEL_ID`: 메시지를 발송할 Slack 채널 ID (`C0XXXXXXXX`). 채널에 봇이 초대돼 있어야 함 (`/invite @앱이름`)
 - (선택) `SLACK_WEBHOOK_URL`: `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID` 미설정 시의 fallback. 이 모드는 스레드 분리 불가. **`railway-healthcheck.yml` 알림에도 재사용됨**
 - (선택) `RAILWAY_HEALTH_URL`: `railway-healthcheck.yml` 이 ping 하는 URL. 예: `https://<service>.up.railway.app/health`. 미설정 시 헬스체크 워크플로가 실패하므로, slack-applied-action 서비스를 운영한다면 등록 권장
+- (선택) `NOTION_TOKEN`: Notion Internal Integration Token. `ntn_...` 또는 `secret_...` 둘 다 가능. `sync-notion.js` 가 호출. 미설정이면 노션 sync step 자동 skip
+- (선택) `NOTION_PARENT_PAGE_ID`: 노션 parent page ID (32자 hex, dash 포함도 OK). 사용자가 빈 페이지를 만들고 integration 에 share 한 뒤 그 페이지 ID 등록. 매주 워크플로가 이 페이지 안에 `📊 YYYY-MM-DD Weekly Snapshot` sub-page 를 자동 생성
 - `GITHUB_TOKEN`: 기본 제공 토큰 사용, 별도 설정 불필요 (history 자동 커밋용)
 
 ### Railway (`slack-applied-action`) 서비스 환경변수
@@ -99,6 +105,26 @@ Job 구성:
 - `SLACK_BOT_TOKEN`: 위와 동일 (스레드에 결과 게시 + Modal 열기)
 - `GITHUB_TOKEN`: Fine-grained PAT (Contents: Read & Write 만, 본 레포 한정 권장)
 - (선택) `GITHUB_REPO` / `GITHUB_FILE_PATH` / `GITHUB_BRANCH` / `COMMIT_AUTHOR_NAME` / `COMMIT_AUTHOR_EMAIL`: 기본값 사용 시 생략
+
+### Notion 셋업 (선택)
+
+매주 노션에 주차별 sub-page 가 자동 생성되도록 하려면:
+
+1. **Integration 생성**: https://www.notion.so/profile/integrations → "+ New integration" (Internal) → Save → **Internal Integration Secret** 복사 (`ntn_...` 또는 `secret_...`)
+2. **Parent page 생성**: 노션 워크스페이스의 적당한 위치에 빈 페이지 1개 (이름 예: `Site Monitoring Weekly`)
+3. **Integration 권한**: 그 페이지 우상단 `···` → **Connections** → 위 integration 추가
+4. **Page ID 복사**: 페이지 URL 의 마지막 32자 hex (dash 포함 형식도 OK)
+5. **GitHub Secrets 등록**:
+   - `NOTION_TOKEN` = 1단계의 token
+   - `NOTION_PARENT_PAGE_ID` = 4단계의 page ID
+
+이후 매주 lighthouse 실행 시 parent page 안에 `📊 YYYY-MM-DD Weekly Snapshot` sub-page 자동 생성. sub-page 내부:
+
+- ⚠️ Regressions (perf Δ ≤ -10) 목록
+- ℹ️ 회귀/개선/총 URL 카운트 callout
+- 📊 Full Table (inline DB) — 11 컬럼: URL · Device · Host · Path · Trend(8w) · Perf Now/Δ · LCP Now/Δ · CLS Now · Status(Formula 자동)
+
+> ⚠️ 매주 새 DB 가 생성되므로, 노션에서 컬럼 type 을 수동 수정해도 다음 주 새 DB 에는 적용 안 됨. schema 변경이 필요하면 [sync-notion.js](sync-notion.js) 의 `createInlineDatabase()` 를 수정.
 
 ### Slack App 설정 요약
 
