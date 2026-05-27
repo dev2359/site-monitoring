@@ -13,6 +13,8 @@ const path = require("path");
 const IN_PATH = path.join("results", "ai-input.json");
 const OUT_PATH = path.join("results", "ai-suggestions.md");
 const APPLIED_PATH = process.env.APPLIED_ACTIONS_PATH || "applied-actions.md";
+// evaluate-applied-actions.js 가 만든 코드 기반 효과 검증 결과 (있으면 fact 로 주입).
+const APPLIED_EVAL_PATH = path.join("results", "applied-eval.json");
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -66,7 +68,7 @@ function writeText(p, text) {
   fs.writeFileSync(p, text, "utf-8");
 }
 
-function buildPrompt(input, appliedFiltered) {
+function buildPrompt(input, appliedFiltered, appliedEval) {
   const warn = Math.round((input.thresholds?.warn ?? 0.8) * 100);
   const crit = Math.round((input.thresholds?.crit ?? 0.6) * 100);
 
@@ -88,6 +90,7 @@ ${targets
 `
     : "";
 
+  // (A) 재제안 차단 — 최근 적용 목록과 동일/유사 작업은 새 액션으로 제안 금지.
   const appliedBlock = appliedFiltered && appliedFiltered.kept.length > 0
     ? `
 
@@ -95,19 +98,31 @@ ${targets
 \`\`\`
 ${appliedFiltered.kept.join("\n")}
 \`\`\`
-검증 규칙(반드시 지킬 것):
-1. 위 목록에 있는 액션과 *동일/유사* 한 작업은 "개선 액션" 또는 "Top URL Actions" 의 새 액션으로 **제안하지 말 것**. 대신 현재 metric 으로 *효과 검증* 만 수행.
-2. 효과 검증은 아래 둘 중 하나로 분류:
-   - **효과 보임**: 해당 host/URL 의 현재 LCP/CLS/TBT 가 액션 기록 이전 측정 대비 개선됨 → 해당 host 의 "Per-site Diagnosis" → '원인 가설' 또는 '개선 액션' 마지막 줄에 \`✅ [YYYY-MM-DD 적용한 X] 가 Y metric 을 Z 만큼 개선시킨 것으로 보임\` 한 줄 추가.
-   - **효과 불명/악화**: 액션 기록은 있지만 현재 metric 이 여전히 나쁘거나 더 악화 → 해당 host 의 '개선 액션' 또는 'Cross-cutting Recommendations' 에 \`⚠️ [YYYY-MM-DD 적용한 X] 기록 있으나 현재 Y metric 이 여전히 N — 적용 상태 검증 / 롤백 가능성 확인 권장\` 한 줄 추가.
-3. ${APPLIED_WINDOW_WEEKS}주 이전 기록은 이 목록에서 제외됨 — 그 시점에 적용한 액션이라도 다시 제안 가능 (롤백/시간 경과에 따른 재제안 허용).
+규칙:
+1. 위 목록에 있는 액션과 *동일/유사* 한 작업은 "개선 액션" 또는 "Top URL Actions" 의 새 액션으로 **제안하지 말 것** (이미 적용됨).
+2. ${APPLIED_WINDOW_WEEKS}주 이전 기록은 이 목록에서 제외됨 — 그 시점 액션이라도 다시 제안 가능 (롤백/시간 경과에 따른 재제안 허용).
+`
+    : "";
+
+  // (B) 코드가 계산한 효과 검증 결과 — AI 는 다시 판정하지 말고 그대로 사실로 인용.
+  const evalResults = appliedEval && Array.isArray(appliedEval.results) ? appliedEval.results : [];
+  const evalBlock = evalResults.length > 0
+    ? `
+
+[적용 액션 효과 검증 — 코드가 before/after metric 비교로 산출한 *확정 사실*]
+${evalResults.map((r) => `- ${r.summaryLine}`).join("\n")}
+규칙(반드시 지킬 것):
+1. 위 검증 결과는 코드가 계산한 사실이다. **다시 판정하거나 ✅/⚠️/➖ 를 새로 만들지 말 것.**
+2. 해당 host 의 "Per-site Diagnosis" 에서 위 사실을 *컨텍스트로만* 활용 (예: 효과 보인 액션은 "최근 X 가 효과 보이는 가운데..." 식으로 언급, 악화/미반영은 원인 재진단).
+3. ✅(효과 보임) 으로 검증된 액션과 동일 metric 을 노린 *유사* 작업은 새로 제안하지 말 것.
+4. ⚠️(악화/미반영) host 는 다른 원인 가설을 세워 *다른* 액션을 제안할 것.
 `
     : "";
 
   return `
 너는 Lighthouse/Core Web Vitals 기반 웹 성능 개선 컨설턴트다.
 아래 JSON 은 여러 사이트의 측정 결과로 mobile/desktop URL 별 점수·metric 과 host 별 집계를 포함한다.
-${targetsBlock}${appliedBlock}
+${targetsBlock}${appliedBlock}${evalBlock}
 목표:
 - 일반론이 아니라 host/URL 단위로 구체적인 진단을 한다.
 - 각 액션은 어떤 요소/리소스를 어떻게 바꾸면 어떤 metric(LCP/CLS/TBT/INP 등)이 어떻게 개선되는지 명시.
@@ -356,7 +371,21 @@ async function main() {
     }
   }
 
-  const prompt = buildPrompt(slim, appliedFiltered);
+  // 코드 기반 효과 검증 결과 (evaluate-applied-actions.js 산출). 있으면 fact 로 주입.
+  let appliedEval = null;
+  if (fs.existsSync(APPLIED_EVAL_PATH)) {
+    try {
+      appliedEval = JSON.parse(fs.readFileSync(APPLIED_EVAL_PATH, "utf-8"));
+      const n = Array.isArray(appliedEval.results) ? appliedEval.results.length : 0;
+      console.log(`ℹ️ applied-eval: ${n}건 (counts=${JSON.stringify(appliedEval.counts || {})})`);
+    } catch (e) {
+      console.warn(`⚠️ Failed to read ${APPLIED_EVAL_PATH}:`, e?.message || e);
+    }
+  } else {
+    console.log(`ℹ️ ${APPLIED_EVAL_PATH} 없음 — 효과 검증 블록 생략 (evaluate-applied-actions.js 미실행)`);
+  }
+
+  const prompt = buildPrompt(slim, appliedFiltered, appliedEval);
 
   try {
     let md = await callOpenAI(prompt);

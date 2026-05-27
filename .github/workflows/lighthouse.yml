@@ -193,6 +193,18 @@ jobs:
             echo "No generate-ai-input.js. Skipping."
           fi
 
+      # 적용 액션 효과를 코드로 검증 → applied-eval.json/md. generate-ai-suggestions 앞에 두어
+      # AI 가 검증 결과를 fact 로 받도록 함. history commit 이 이미 끝나 이번 회차도 after 윈도 포함.
+      - name: Evaluate applied actions (deterministic)
+        run: node evaluate-applied-actions.js
+
+      - name: Publish applied-action evaluation to Job Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f results/applied-eval.md ]; then
+            cat results/applied-eval.md >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Generate AI suggestions (OpenAI)
         run: node generate-ai-suggestions.js
         env:
@@ -257,4 +269,6 @@ jobs:
             results/ai-input.json
             results/ai-suggestions.md
             results/slack-payload.json
+            results/applied-eval.md
+            results/applied-eval.json
           if-no-files-found: warn

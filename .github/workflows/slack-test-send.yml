@@ -66,6 +66,10 @@ jobs:
           OPENAI_MODEL: gpt-4.1-mini
           OPENAI_MAX_OUTPUT_TOKENS: "2500"
 
+      # evaluate 는 history/*.json 을 직접 읽으므로 summary seed 와 무관하게 동작.
+      - name: Evaluate applied actions (deterministic)
+        run: node evaluate-applied-actions.js
+
       - name: Generate AI suggestions
         run: node generate-ai-suggestions.js
         env:
@@ -112,4 +116,6 @@ jobs:
             results/compare-3m-all.md
             results/compare-wow.md
             results/regressions-wow.md
+            results/applied-eval.md
+            results/applied-eval.json
           if-no-files-found: warn
