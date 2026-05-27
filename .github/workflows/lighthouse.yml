@@ -13,8 +13,19 @@ permissions:
   contents: write
 
 jobs:
-  lighthouse_desktop:
-    runs-on: ubuntu-latest
+  # device(desktop/mobile) × scope(domestic/global) = 4 jobs 병렬.
+  # domestic 의 runner 를 나중에 self-hosted(Seoul) 로 바꾸면 국내 사이트만 한국 환경에서 측정됨.
+  lighthouse:
+    name: lighthouse (${{ matrix.device }}/${{ matrix.scope }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { device: desktop, scope: domestic, runner: ubuntu-latest }
+          - { device: desktop, scope: global,   runner: ubuntu-latest }
+          - { device: mobile,  scope: domestic, runner: ubuntu-latest }
+          - { device: mobile,  scope: global,   runner: ubuntu-latest }
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,43 +38,31 @@ jobs:
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli
 
-      - name: Run Lighthouse (Desktop)
-        run: lhci autorun --config=lighthouserc.js
+      - name: Run Lighthouse (${{ matrix.device }} / ${{ matrix.scope }})
+        env:
+          LH_SCOPE: ${{ matrix.scope }}
+        run: |
+          if [ "${{ matrix.device }}" = "desktop" ]; then
+            lhci autorun --config=lighthouserc.js
+          else
+            lhci autorun --config=lighthouserc_mobile.js
+          fi
 
-      - name: Upload Desktop Results
+      # scope 별 결과를 같은 results/<device> 로 merge 할 때 manifest.json 이 충돌하므로 제거.
+      # extract-scores.js 는 manifest 가 없으면 개별 LHR json 을 파싱 (동일 결과).
+      - name: Remove manifest (avoid cross-scope collision)
+        run: rm -f results/${{ matrix.device }}/manifest.json
+
+      - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: lighthouse-desktop-results
-          path: results/desktop/*.*
-          if-no-files-found: warn
-
-  lighthouse_mobile:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install Lighthouse CI
-        run: npm install -g @lhci/cli
-
-      - name: Run Lighthouse (Mobile)
-        run: lhci autorun --config=lighthouserc_mobile.js
-
-      - name: Upload Mobile Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-mobile-results
-          path: results/mobile/*.*
+          name: lh-${{ matrix.device }}-${{ matrix.scope }}
+          path: results/${{ matrix.device }}/*.*
           if-no-files-found: warn
 
   summarize_and_notify:
     runs-on: ubuntu-latest
-    needs: [lighthouse_desktop, lighthouse_mobile]
+    needs: [lighthouse]
 
     steps:
       - name: Checkout repository
@@ -86,17 +85,20 @@ jobs:
             echo "No package.json. Skipping npm install."
           fi
 
-      - name: Download Desktop Results
+      # matrix 의 4 artifact 를 device 별로 merge (domestic + global 합침).
+      - name: Download Desktop Results (merge scopes)
         uses: actions/download-artifact@v4
         with:
-          name: lighthouse-desktop-results
+          pattern: lh-desktop-*
           path: results/desktop
+          merge-multiple: true
 
-      - name: Download Mobile Results
+      - name: Download Mobile Results (merge scopes)
         uses: actions/download-artifact@v4
         with:
-          name: lighthouse-mobile-results
+          pattern: lh-mobile-*
           path: results/mobile
+          merge-multiple: true
 
       - name: List result files (pre-parse)
         run: |
