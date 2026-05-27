@@ -1,0 +1,62 @@
+name: Lighthouse Config Test (1 URL, fast)
+
+# simulate 전환 효과를 GitHub runner 환경에서 빠르게 검증하기 위한 임시 워크플로.
+# main config 의 settings 를 그대로 쓰는 *.test.js 로 URL 1개만 측정 → 점수를 Job Summary 에 출력.
+# 로컬 Chrome DevTools Lighthouse 점수와 비교해 차이가 좁혀졌는지 확인.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  config_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse Desktop (1 URL)
+        run: lhci autorun --config=lighthouserc.test.js || true
+
+      - name: Run Lighthouse Mobile (1 URL)
+        run: lhci autorun --config=lighthouserc_mobile.test.js || true
+
+      - name: Extract + print scores
+        run: |
+          node extract-scores.js || true
+          echo "## ⚙️ Config Test 결과 (simulate 적용)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Device | URL | Perf | LCP | CLS | TBT |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---:|---:|---:|---:|" >> $GITHUB_STEP_SUMMARY
+          node -e '
+            const s = require("./results/summary.json");
+            for (const it of (s.items || [])) {
+              const m = it.metrics || {};
+              const perf = Math.round((it.performance || 0) * 100);
+              const lcp = m.lcp ? Math.round(m.lcp) + "ms" : "N/A";
+              const cls = typeof m.cls === "number" ? m.cls.toFixed(3) : "N/A";
+              const tbt = m.tbt ? Math.round(m.tbt) + "ms" : "N/A";
+              console.log(`| ${it.device} | ${it.url} | ${perf} | ${lcp} | ${cls} | ${tbt} |`);
+            }
+          ' | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: Upload raw reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-test-reports
+          path: |
+            results/desktop/*.*
+            results/mobile/*.*
+            results/summary.json
+          if-no-files-found: warn

@@ -56,10 +56,12 @@ module.exports = {
           disabled: false,
         },
 	    throttlingMethod: 'simulate',
+        // simulate 는 rttMs / throughputKbps key 를 사용. 기존 requestLatencyMs /
+        // downloadThroughputKbps 는 devtools 용이라 simulate 에서 무시되어 의도한 5000kbps 가
+        // 반영되지 않았음 → simulate 용 key 로 정정.
         throttling: {
-          requestLatencyMs: 150,
-          downloadThroughputKbps: 5000,
-          uploadThroughputKbps: 3000,
+          rttMs: 150,
+          throughputKbps: 5000,
           cpuSlowdownMultiplier: 1,
         },
 	    maxWaitForLoad: 90000,

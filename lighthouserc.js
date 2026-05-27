@@ -46,8 +46,17 @@ module.exports = {
       output: ["html", "json"],
       settings: {
         formFactor: "desktop",
-        screenEmulation: { disabled: true },
-        throttlingMethod: "devtools",
+        // 로컬 Chrome DevTools 의 desktop Lighthouse 와 동일하게 매칭 (1350x940, DPR 1).
+        screenEmulation: {
+          mobile: false,
+          width: 1350,
+          height: 940,
+          deviceScaleFactor: 1,
+          disabled: false,
+        },
+        // 로컬 DevTools 기본값과 동일하게 simulate 로 변경 — runner 의 지리적 latency 가
+        // 실제 throttle 에 더해지지 않고 rttMs 모델값으로 대체됨.
+        throttlingMethod: "simulate",
         throttling: {
           rttMs: 40,
           throughputKbps: 10240,
