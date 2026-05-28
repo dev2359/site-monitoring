@@ -155,6 +155,9 @@ function extractOneReport(reportJson) {
   ]);
 
   return {
+    // requestedUrl = 측정 요청 URL (redirect 전). finalUrl 은 redirect 후라
+    // m.* 같은 다른 host 로 바뀔 수 있어 device(측정 환경) 와 어긋남 → requestedUrl 우선.
+    requestedUrl: root.requestedUrl || null,
     finalUrl: root.finalUrl || root.requestedUrl || "(unknown)",
     scores: { performance, accessibility, bestPractices, seo },
     metrics: { lcp, cls, tbt, si },
@@ -228,11 +231,13 @@ function loadReports({ dir, device }) {
       if (!data) continue;
 
       if (!data.categories && !data.lhr?.categories) {
+        const root = data.lhr || data;
         items.push({
           device,
           file,
           ok: false,
-          url: data.finalUrl || data.requestedUrl || "(unknown)",
+          // requestedUrl 우선 — redirect 로 finalUrl 이 m.* 등 다른 host 가 돼도 device 와 일치 유지.
+          url: root.requestedUrl || data.finalUrl || data.requestedUrl || "(unknown)",
           runtimeError: data.runtimeError || { message: "Invalid report (no categories)" },
         });
         continue;
@@ -243,7 +248,8 @@ function loadReports({ dir, device }) {
         device,
         file,
         ok: true,
-        url: extracted.finalUrl,
+        // requestedUrl 우선 (manifest 경로의 entry.url 과 일관). finalUrl 은 redirect 후라 device 와 어긋날 수 있음.
+        url: extracted.requestedUrl || extracted.finalUrl,
         performance: extracted.scores.performance,
         accessibility: extracted.scores.accessibility,
         bestPractices: extracted.scores.bestPractices,
