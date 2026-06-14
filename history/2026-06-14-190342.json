@@ -1,0 +1,2235 @@
+{
+  "generatedAt": "2026-06-14T19:03:42.523Z",
+  "thresholds": {
+    "warn": 0.8,
+    "crit": 0.6
+  },
+  "overall": {
+    "status": "CRIT",
+    "worst": {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=10",
+      "performance": 0.32666666666666666
+    },
+    "totalReports": 395,
+    "validReports": 79,
+    "invalidReports": 0
+  },
+  "problems": [
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=10",
+      "performance": 0.32666666666666666,
+      "accessibility": 0.79,
+      "bestPractices": 0.64,
+      "seo": 1,
+      "metrics": {
+        "lcp": 22223.396999999997,
+        "cls": 0.8196590522464478,
+        "tbt": 133.16666666666666,
+        "si": 12313.778338732562
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/product/detail.html?product_no=33",
+      "performance": 0.33666666666666667,
+      "accessibility": 0.7233333333333333,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5662.404098333335,
+        "cls": 0.7147411109467671,
+        "tbt": 114.33333333333394,
+        "si": 9146.184725554174
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=169",
+      "performance": 0.33666666666666667,
+      "accessibility": 0.79,
+      "bestPractices": 0.64,
+      "seo": 1,
+      "metrics": {
+        "lcp": 21544.3895,
+        "cls": 0.8189642619059222,
+        "tbt": 124.66666666666667,
+        "si": 14716.261944910804
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/product/detail.html?product_no=129",
+      "performance": 0.3433333333333333,
+      "accessibility": 0.7333333333333334,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5032.684049999999,
+        "cls": 0.5947307114646413,
+        "tbt": 120.5,
+        "si": 9731.469519675049
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.kr/product/detail.html?product_no=71",
+      "performance": 0.37333333333333335,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9078.188333333334,
+        "cls": 0.5228907459080219,
+        "tbt": 73.66666666666667,
+        "si": 14199.25955865174
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.kr/product/detail.html?product_no=71",
+      "performance": 0.4033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 4862.695333333333,
+        "cls": 0.41166962613919234,
+        "tbt": 102.50000000000121,
+        "si": 8641.692810317647
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/product/detail.html?product_no=33",
+      "performance": 0.41,
+      "accessibility": 0.7166666666666667,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9357.254149999999,
+        "cls": 0.36320792475525804,
+        "tbt": 99.16666666666545,
+        "si": 11922.213049406177
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/product/detail.html?product_no=129",
+      "performance": 0.4166666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8888.241666666665,
+        "cls": 0.356801483063212,
+        "tbt": 65.33333333333455,
+        "si": 10530.340915652803
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/",
+      "performance": 0.42,
+      "accessibility": 0.87,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 19116.50692094274,
+        "cls": 0.3755315818712604,
+        "tbt": 45.166666666666664,
+        "si": 11647.18402012571
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.jp/",
+      "performance": 0.42333333333333334,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.57,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 10412.482856666667,
+        "cls": 0,
+        "tbt": 696.4999999999987,
+        "si": 7814.508263214445
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.co.kr/product/detail.html?product_no=74",
+      "performance": 0.4266666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5303.064833333334,
+        "cls": 0.5098135914688031,
+        "tbt": 96.5,
+        "si": 13612.951163491476
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=99",
+      "performance": 0.4366666666666667,
+      "accessibility": 0.83,
+      "bestPractices": 0.75,
+      "seo": 0.66,
+      "metrics": {
+        "lcp": 17438.918166666666,
+        "cls": 0.3700053959488676,
+        "tbt": 114.83333333333333,
+        "si": 10004.569736907893
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.cleanery.co.kr/product/detail.html?product_no=15",
+      "performance": 0.44,
+      "accessibility": 0.64,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 18865.797333333332,
+        "cls": 0.23894905146603118,
+        "tbt": 172.50000000000242,
+        "si": 11612.51947807691
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/products/intimate-care-gel-for-women",
+      "performance": 0.44333333333333336,
+      "accessibility": 0.83,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 11269.322,
+        "cls": 0.22197183807922113,
+        "tbt": 112.6112733333345,
+        "si": 15666.516629004467
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://hedn.kr/product/detail.html?product_no=64",
+      "performance": 0.4566666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.7233333333333333,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 30013.389239969885,
+        "cls": 0.1904905860202676,
+        "tbt": 137.5,
+        "si": 12870.097225800033
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=12",
+      "performance": 0.47000000000000003,
+      "accessibility": 0.83,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 15972.220097259114,
+        "cls": 0.2733545961147429,
+        "tbt": 116.66666666666667,
+        "si": 12524.894493839442
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/product/detail.html?product_no=12",
+      "performance": 0.48,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 14498.522233267218,
+        "cls": 0.15584851444136735,
+        "tbt": 139.16666666666666,
+        "si": 9348.096016603376
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/",
+      "performance": 0.48,
+      "accessibility": 0.83,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 10845.655730649822,
+        "cls": 0.15302037672800908,
+        "tbt": 166.16666666666606,
+        "si": 13652.3424539998
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.jp/",
+      "performance": 0.48666666666666664,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 6294.162083333332,
+        "cls": 0,
+        "tbt": 309.0000000000003,
+        "si": 3054.7259115694364
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=169",
+      "performance": 0.49666666666666665,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12417.059166666666,
+        "cls": 0.18109869295527306,
+        "tbt": 99.66666666666606,
+        "si": 7580.578622863232
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/",
+      "performance": 0.5,
+      "accessibility": 0.82,
+      "bestPractices": 0.7666666666666666,
+      "seo": 1,
+      "metrics": {
+        "lcp": 9056.62383333333,
+        "cls": 0.14092336687189957,
+        "tbt": 61.166666666666366,
+        "si": 6802.480237453344
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.jp/products/sebum-rebalancing-rx-131-ampoule",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.56,
+      "seo": 0.77,
+      "metrics": {
+        "lcp": 5740.548083333334,
+        "cls": 0.006974170968903025,
+        "tbt": 309.66666666666697,
+        "si": 3500.0933724070455
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.co.kr/product/detail.html?product_no=74",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.79,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 2692.2695,
+        "cls": 0.36418577773131827,
+        "tbt": 99.33333333333364,
+        "si": 8655.239974259912
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.jp/",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8266666666666667,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 3579.0527500000003,
+        "cls": 0.00005372199405297525,
+        "tbt": 342.70441666666676,
+        "si": 3391.148087232735
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.jp/",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.57,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8604.285999999998,
+        "cls": 0.0001511818968749406,
+        "tbt": 354.5,
+        "si": 7590.062361002591
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://hedn.kr/product/detail.html?product_no=64",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 16554.667598622636,
+        "cls": 0.04871495881002438,
+        "tbt": 159.16666666666697,
+        "si": 8071.99316498304
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.83,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 4665.369851158243,
+        "cls": 0.05649986882879785,
+        "tbt": 266.166666666666,
+        "si": 12993.074623880371
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/collections/best-sellers",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.89,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8740.135083333333,
+        "cls": 0.15286919483113415,
+        "tbt": 54,
+        "si": 12031.786980382409
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://cleanery.co.kr/product/detail.html?product_no=15",
+      "performance": 0.51,
+      "accessibility": 0.68,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7485.389746666668,
+        "cls": 0.041091678666290495,
+        "tbt": 194.33333333333272,
+        "si": 6990.242316965453
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.jp/products/sebum-rebalancing-rx-131-ampoule",
+      "performance": 0.51,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.57,
+      "seo": 0.7966666666666667,
+      "metrics": {
+        "lcp": 15020.39073,
+        "cls": 0.0016159616982824008,
+        "tbt": 368.33333333333303,
+        "si": 7165.409605084163
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/products/intimate-care-gel-for-women",
+      "performance": 0.5133333333333333,
+      "accessibility": 0.86,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5005.725231991577,
+        "cls": 0.05644614683474488,
+        "tbt": 234.66666666666697,
+        "si": 8707.441306629282
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.jp/products/%E3%83%91%E3%83%92%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9F%E3%82%B9%E3%83%88",
+      "performance": 0.5133333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 21504.687745493564,
+        "cls": 0,
+        "tbt": 415.6534166666661,
+        "si": 6288.538762120053
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/product/detail.html?product_no=68",
+      "performance": 0.52,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 23808.811666666665,
+        "cls": 0.12043302867991379,
+        "tbt": 160.66666666666666,
+        "si": 12730.843175793532
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=14",
+      "performance": 0.52,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12423.424811914005,
+        "cls": 0.1307326645478164,
+        "tbt": 172.4999999999994,
+        "si": 13357.813510770102
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/product/detail.html?product_no=68",
+      "performance": 0.53,
+      "accessibility": 0.77,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12586.52345028997,
+        "cls": 0.07976574658798184,
+        "tbt": 134.66666666666697,
+        "si": 8166.721336114565
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=202",
+      "performance": 0.53,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7689.400456666665,
+        "cls": 0.13267361853377593,
+        "tbt": 112.66666666666758,
+        "si": 7605.559497305789
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/product/detail.html?product_no=12",
+      "performance": 0.53,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 22682.282936825824,
+        "cls": 0.1298130633145465,
+        "tbt": 124.50000000000061,
+        "si": 14954.172469333886
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://hedn.kr/",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.85,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 18761.133546666664,
+        "cls": 0.0014617804946183992,
+        "tbt": 133.0000000000006,
+        "si": 8606.110039666935
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=12",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.69,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9655.224166666661,
+        "cls": 0.10115041381728691,
+        "tbt": 116.5,
+        "si": 8310.715797315146
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=99",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.7200000000000001,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.58,
+      "metrics": {
+        "lcp": 9527.909000000001,
+        "cls": 0.09593046675260197,
+        "tbt": 126.5,
+        "si": 6485.123162484284
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/",
+      "performance": 0.5366666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9067.291933333334,
+        "cls": 0.1539693130985723,
+        "tbt": 80.33333333333394,
+        "si": 8198.630585745077
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=46",
+      "performance": 0.54,
+      "accessibility": 0.69,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12355.635166666665,
+        "cls": 0.0176605909547433,
+        "tbt": 111.66666666666697,
+        "si": 9975.789437666712
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=86",
+      "performance": 0.54,
+      "accessibility": 0.75,
+      "bestPractices": 0.79,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7685.801988333335,
+        "cls": 0.1207054808054064,
+        "tbt": 116.83333333333333,
+        "si": 11928.124030251134
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 40113.732666666656,
+        "cls": 0.015007667162828711,
+        "tbt": 128.16666666666666,
+        "si": 8282.544452332348
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 14363.84007,
+        "cls": 0.00054811220703871,
+        "tbt": 108.33333333333333,
+        "si": 6286.414306596717
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=10",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12582.842273333335,
+        "cls": 0.10363534783930904,
+        "tbt": 109.16666666666667,
+        "si": 7387.694035960182
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=86",
+      "performance": 0.5466666666666667,
+      "accessibility": 0.77,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 6177.131600000001,
+        "cls": 0.07591046786671155,
+        "tbt": 145.0000000000003,
+        "si": 6353.165324145768
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/",
+      "performance": 0.5466666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 5912.9944,
+        "cls": 0.1775768101674433,
+        "tbt": 100.66666666666667,
+        "si": 11705.436176198637
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.sg/",
+      "performance": 0.55,
+      "accessibility": 0.89,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 5965.176666666666,
+        "cls": 0.0019917075270700175,
+        "tbt": 301.8333333333334,
+        "si": 3271.0493302790783
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/",
+      "performance": 0.55,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12128.692853333332,
+        "cls": 0.0004776341970437184,
+        "tbt": 119.83333333333364,
+        "si": 7153.521126883387
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/products/131-pore-clearing-serum",
+      "performance": 0.55,
+      "accessibility": 0.81,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8531.360916666667,
+        "cls": 0.1539693130985723,
+        "tbt": 99.83333333333303,
+        "si": 6778.838736259601
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.co.kr/",
+      "performance": 0.55,
+      "accessibility": 0.84,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 16444.990166666666,
+        "cls": 0.12948779175136452,
+        "tbt": 103,
+        "si": 8753.941430301658
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=46",
+      "performance": 0.5533333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 17041.868983333337,
+        "cls": 0.005398089673650119,
+        "tbt": 111.33333333333333,
+        "si": 16469.244137799345
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=38",
+      "performance": 0.56,
+      "accessibility": 0.77,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7885.052619419784,
+        "cls": 0.054220418655499654,
+        "tbt": 118.16666666666636,
+        "si": 5024.084360064368
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=14",
+      "performance": 0.5666666666666665,
+      "accessibility": 0.75,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7602.537628333332,
+        "cls": 0.04503739304359289,
+        "tbt": 128.66666666666697,
+        "si": 7451.946960829235
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://hedn.kr/",
+      "performance": 0.5666666666666665,
+      "accessibility": 0.84,
+      "bestPractices": 0.7366666666666667,
+      "seo": 1,
+      "metrics": {
+        "lcp": 25569.078900702734,
+        "cls": 0.01394484574464116,
+        "tbt": 102,
+        "si": 11310.693417125927
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.co.kr/",
+      "performance": 0.57,
+      "accessibility": 0.85,
+      "bestPractices": 0.7799999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 6443.239999999999,
+        "cls": 0.09423789745135398,
+        "tbt": 102.16666666666636,
+        "si": 5572.583845957534
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/collections/best-sellers",
+      "performance": 0.57,
+      "accessibility": 0.9499999999999998,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8413.7635,
+        "cls": 0.1540031490469205,
+        "tbt": 72.16666666666667,
+        "si": 5915.652177430769
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.sg/products/intimate-care-gel-for-women",
+      "performance": 0.57,
+      "accessibility": 0.82,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 10992.623828892822,
+        "cls": 0.007947972344666227,
+        "tbt": 17.333333333333332,
+        "si": 9770.476379807222
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=38",
+      "performance": 0.5766666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 14366.262206666666,
+        "cls": 0.07685251412254891,
+        "tbt": 127.16666666666788,
+        "si": 8200.498488214453
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=202",
+      "performance": 0.5766666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 13681.883599999996,
+        "cls": 0.06305659308256792,
+        "tbt": 137.66666666666666,
+        "si": 11624.47393133987
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/",
+      "performance": 0.58,
+      "accessibility": 0.79,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7739.064768333334,
+        "cls": 0.0006957035474622376,
+        "tbt": 86.83333333333303,
+        "si": 6771.601552108669
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.81,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 34875.76974957372,
+        "cls": 0.005547943667033535,
+        "tbt": 109.83333333333333,
+        "si": 12664.694007707265
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.71,
+      "seo": 1,
+      "metrics": {
+        "lcp": 24329.749766913457,
+        "cls": 0.0002638714654752381,
+        "tbt": 95.33333333333333,
+        "si": 11096.5385389047
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.sg/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 6933.434016666669,
+        "cls": 0.007947972344666227,
+        "tbt": 83.99999999999939,
+        "si": 10404.456968201093
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.sg/products/intimate-care-gel-for-women",
+      "performance": 0.59,
+      "accessibility": 0.86,
+      "bestPractices": 0.52,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9026.305527506105,
+        "cls": 0.0020554110676180358,
+        "tbt": 49.666666666666664,
+        "si": 4313.735806077159
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/",
+      "performance": 0.59,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 7647.153976666668,
+        "cls": 0.022189471075225568,
+        "tbt": 128.9999999999994,
+        "si": 11397.780998087124
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/",
+      "performance": 0.5966666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 19550.178823333332,
+        "cls": 0.0038968728791039637,
+        "tbt": 92.33333333333364,
+        "si": 9545.509243543938
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.cleanery.co.kr/",
+      "performance": 0.6066666666666666,
+      "accessibility": 0.7233333333333333,
+      "bestPractices": 0.79,
+      "seo": 1,
+      "metrics": {
+        "lcp": 4350.777666666666,
+        "cls": 0.15719389230580974,
+        "tbt": 148.16666666666666,
+        "si": 9665.449336929503
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/",
+      "performance": 0.61,
+      "accessibility": 0.77,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 3571.4867333333336,
+        "cls": 0.001595714059700189,
+        "tbt": 113.5,
+        "si": 7039.173557103375
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/collections/best-sellers",
+      "performance": 0.62,
+      "accessibility": 0.92,
+      "bestPractices": 0.52,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 3894.554,
+        "cls": 0.0522305819614079,
+        "tbt": 83.33333333333319,
+        "si": 6560.408506498105
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/",
+      "performance": 0.63,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 5377.918166666666,
+        "cls": 0.05677744201531495,
+        "tbt": 88.1666666666664,
+        "si": 4540.697080372662
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.sg/",
+      "performance": 0.6333333333333334,
+      "accessibility": 0.83,
+      "bestPractices": 0.52,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 4509.062198812662,
+        "cls": 0.0020722181007149626,
+        "tbt": 105.33333333333333,
+        "si": 7608.875462419338
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://cleanery.co.kr/",
+      "performance": 0.64,
+      "accessibility": 0.75,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 2722.631326666667,
+        "cls": 0.0009666904579242874,
+        "tbt": 141.95632000000055,
+        "si": 7011.476856532586
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/products/131-pore-clearing-serum",
+      "performance": 0.66,
+      "accessibility": 0.81,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 3822.8422499999997,
+        "cls": 0.05890289819214547,
+        "tbt": 116.83333333333333,
+        "si": 3056.0934327564464
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.sg/",
+      "performance": 0.6633333333333334,
+      "accessibility": 0.9,
+      "bestPractices": 0.57,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9287.410886666667,
+        "cls": 0.007678566204435082,
+        "tbt": 132,
+        "si": 6107.020651131407
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/collections/best-sellers",
+      "performance": 0.6966666666666667,
+      "accessibility": 0.9700000000000001,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 3519.4254166666665,
+        "cls": 0.05467441934731956,
+        "tbt": 86.49999999999984,
+        "si": 2906.8161183865827
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum",
+      "performance": 0.73,
+      "accessibility": 0.87,
+      "bestPractices": 0.79,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8847.137666666667,
+        "cls": 0.021097883617524103,
+        "tbt": 74.33333333333333,
+        "si": 2201.3753688255997
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum",
+      "performance": 0.7799999999999999,
+      "accessibility": 0.88,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 4239.016146666666,
+        "cls": 0.014122504354192414,
+        "tbt": 80.66666666666667,
+        "si": 725.19709933246
+      }
+    }
+  ],
+  "items": [
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 40113.732666666656,
+        "cls": 0.015007667162828711,
+        "tbt": 128.16666666666666,
+        "si": 8282.544452332348
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/product/detail.html?product_no=12",
+      "performance": 0.48,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 14498.522233267218,
+        "cls": 0.15584851444136735,
+        "tbt": 139.16666666666666,
+        "si": 9348.096016603376
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://bifigen.com/product/detail.html?product_no=68",
+      "performance": 0.53,
+      "accessibility": 0.77,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12586.52345028997,
+        "cls": 0.07976574658798184,
+        "tbt": 134.66666666666697,
+        "si": 8166.721336114565
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 14363.84007,
+        "cls": 0.00054811220703871,
+        "tbt": 108.33333333333333,
+        "si": 6286.414306596717
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=10",
+      "performance": 0.5433333333333333,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12582.842273333335,
+        "cls": 0.10363534783930904,
+        "tbt": 109.16666666666667,
+        "si": 7387.694035960182
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=169",
+      "performance": 0.49666666666666665,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12417.059166666666,
+        "cls": 0.18109869295527306,
+        "tbt": 99.66666666666606,
+        "si": 7580.578622863232
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.jp/",
+      "performance": 0.48666666666666664,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 6294.162083333332,
+        "cls": 0,
+        "tbt": 309.0000000000003,
+        "si": 3054.7259115694364
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.jp/products/sebum-rebalancing-rx-131-ampoule",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.56,
+      "seo": 0.77,
+      "metrics": {
+        "lcp": 5740.548083333334,
+        "cls": 0.006974170968903025,
+        "tbt": 309.66666666666697,
+        "si": 3500.0933724070455
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.sg/",
+      "performance": 0.55,
+      "accessibility": 0.89,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 5965.176666666666,
+        "cls": 0.0019917075270700175,
+        "tbt": 301.8333333333334,
+        "si": 3271.0493302790783
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum",
+      "performance": 0.7799999999999999,
+      "accessibility": 0.88,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 4239.016146666666,
+        "cls": 0.014122504354192414,
+        "tbt": 80.66666666666667,
+        "si": 725.19709933246
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/",
+      "performance": 0.63,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 5377.918166666666,
+        "cls": 0.05677744201531495,
+        "tbt": 88.1666666666664,
+        "si": 4540.697080372662
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/collections/best-sellers",
+      "performance": 0.6966666666666667,
+      "accessibility": 0.9700000000000001,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 3519.4254166666665,
+        "cls": 0.05467441934731956,
+        "tbt": 86.49999999999984,
+        "si": 2906.8161183865827
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://celladix.us/products/131-pore-clearing-serum",
+      "performance": 0.66,
+      "accessibility": 0.81,
+      "bestPractices": 0.56,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 3822.8422499999997,
+        "cls": 0.05890289819214547,
+        "tbt": 116.83333333333333,
+        "si": 3056.0934327564464
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://cleanery.co.kr/",
+      "performance": 0.64,
+      "accessibility": 0.75,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 2722.631326666667,
+        "cls": 0.0009666904579242874,
+        "tbt": 141.95632000000055,
+        "si": 7011.476856532586
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://cleanery.co.kr/product/detail.html?product_no=15",
+      "performance": 0.51,
+      "accessibility": 0.68,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7485.389746666668,
+        "cls": 0.041091678666290495,
+        "tbt": 194.33333333333272,
+        "si": 6990.242316965453
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/",
+      "performance": 0.55,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 12128.692853333332,
+        "cls": 0.0004776341970437184,
+        "tbt": 119.83333333333364,
+        "si": 7153.521126883387
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/product/detail.html?product_no=129",
+      "performance": 0.3433333333333333,
+      "accessibility": 0.7333333333333334,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5032.684049999999,
+        "cls": 0.5947307114646413,
+        "tbt": 120.5,
+        "si": 9731.469519675049
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://curicell.kr/product/detail.html?product_no=33",
+      "performance": 0.33666666666666667,
+      "accessibility": 0.7233333333333333,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5662.404098333335,
+        "cls": 0.7147411109467671,
+        "tbt": 114.33333333333394,
+        "si": 9146.184725554174
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://hedn.kr/",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.85,
+      "bestPractices": 0.7399999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 18761.133546666664,
+        "cls": 0.0014617804946183992,
+        "tbt": 133.0000000000006,
+        "si": 8606.110039666935
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://hedn.kr/product/detail.html?product_no=64",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 16554.667598622636,
+        "cls": 0.04871495881002438,
+        "tbt": 159.16666666666697,
+        "si": 8071.99316498304
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.co.kr/",
+      "performance": 0.57,
+      "accessibility": 0.85,
+      "bestPractices": 0.7799999999999999,
+      "seo": 1,
+      "metrics": {
+        "lcp": 6443.239999999999,
+        "cls": 0.09423789745135398,
+        "tbt": 102.16666666666636,
+        "si": 5572.583845957534
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.co.kr/product/detail.html?product_no=74",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.79,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 2692.2695,
+        "cls": 0.36418577773131827,
+        "tbt": 99.33333333333364,
+        "si": 8655.239974259912
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://housweet.kr/product/detail.html?product_no=71",
+      "performance": 0.4033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 4862.695333333333,
+        "cls": 0.41166962613919234,
+        "tbt": 102.50000000000121,
+        "si": 8641.692810317647
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.83,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 4665.369851158243,
+        "cls": 0.05649986882879785,
+        "tbt": 266.166666666666,
+        "si": 12993.074623880371
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/collections/best-sellers",
+      "performance": 0.62,
+      "accessibility": 0.92,
+      "bestPractices": 0.52,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 3894.554,
+        "cls": 0.0522305819614079,
+        "tbt": 83.33333333333319,
+        "si": 6560.408506498105
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.com/products/intimate-care-gel-for-women",
+      "performance": 0.5133333333333333,
+      "accessibility": 0.86,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5005.725231991577,
+        "cls": 0.05644614683474488,
+        "tbt": 234.66666666666697,
+        "si": 8707.441306629282
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.jp/",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8266666666666667,
+      "bestPractices": 0.56,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 3579.0527500000003,
+        "cls": 0.00005372199405297525,
+        "tbt": 342.70441666666676,
+        "si": 3391.148087232735
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.sg/",
+      "performance": 0.6333333333333334,
+      "accessibility": 0.83,
+      "bestPractices": 0.52,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 4509.062198812662,
+        "cls": 0.0020722181007149626,
+        "tbt": 105.33333333333333,
+        "si": 7608.875462419338
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://lactomedi.sg/products/intimate-care-gel-for-women",
+      "performance": 0.59,
+      "accessibility": 0.86,
+      "bestPractices": 0.52,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9026.305527506105,
+        "cls": 0.0020554110676180358,
+        "tbt": 49.666666666666664,
+        "si": 4313.735806077159
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/",
+      "performance": 0.58,
+      "accessibility": 0.79,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7739.064768333334,
+        "cls": 0.0006957035474622376,
+        "tbt": 86.83333333333303,
+        "si": 6771.601552108669
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=38",
+      "performance": 0.56,
+      "accessibility": 0.77,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7885.052619419784,
+        "cls": 0.054220418655499654,
+        "tbt": 118.16666666666636,
+        "si": 5024.084360064368
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=86",
+      "performance": 0.5466666666666667,
+      "accessibility": 0.77,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 6177.131600000001,
+        "cls": 0.07591046786671155,
+        "tbt": 145.0000000000003,
+        "si": 6353.165324145768
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/",
+      "performance": 0.5,
+      "accessibility": 0.82,
+      "bestPractices": 0.7666666666666666,
+      "seo": 1,
+      "metrics": {
+        "lcp": 9056.62383333333,
+        "cls": 0.14092336687189957,
+        "tbt": 61.166666666666366,
+        "si": 6802.480237453344
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=12",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.69,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9655.224166666661,
+        "cls": 0.10115041381728691,
+        "tbt": 116.5,
+        "si": 8310.715797315146
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=46",
+      "performance": 0.54,
+      "accessibility": 0.69,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12355.635166666665,
+        "cls": 0.0176605909547433,
+        "tbt": 111.66666666666697,
+        "si": 9975.789437666712
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://themedion.com/product/detail.html?product_no=99",
+      "performance": 0.5333333333333333,
+      "accessibility": 0.7200000000000001,
+      "bestPractices": 0.7799999999999999,
+      "seo": 0.58,
+      "metrics": {
+        "lcp": 9527.909000000001,
+        "cls": 0.09593046675260197,
+        "tbt": 126.5,
+        "si": 6485.123162484284
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/",
+      "performance": 0.61,
+      "accessibility": 0.77,
+      "bestPractices": 0.6999999999999998,
+      "seo": 1,
+      "metrics": {
+        "lcp": 3571.4867333333336,
+        "cls": 0.001595714059700189,
+        "tbt": 113.5,
+        "si": 7039.173557103375
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=14",
+      "performance": 0.5666666666666665,
+      "accessibility": 0.75,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7602.537628333332,
+        "cls": 0.04503739304359289,
+        "tbt": 128.66666666666697,
+        "si": 7451.946960829235
+      }
+    },
+    {
+      "device": "desktop",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=202",
+      "performance": 0.53,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.7399999999999999,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7689.400456666665,
+        "cls": 0.13267361853377593,
+        "tbt": 112.66666666666758,
+        "si": 7605.559497305789
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.81,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 34875.76974957372,
+        "cls": 0.005547943667033535,
+        "tbt": 109.83333333333333,
+        "si": 12664.694007707265
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/product/detail.html?product_no=12",
+      "performance": 0.53,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 22682.282936825824,
+        "cls": 0.1298130633145465,
+        "tbt": 124.50000000000061,
+        "si": 14954.172469333886
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://bifigen.com/product/detail.html?product_no=68",
+      "performance": 0.52,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 23808.811666666665,
+        "cls": 0.12043302867991379,
+        "tbt": 160.66666666666666,
+        "si": 12730.843175793532
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.71,
+      "seo": 1,
+      "metrics": {
+        "lcp": 24329.749766913457,
+        "cls": 0.0002638714654752381,
+        "tbt": 95.33333333333333,
+        "si": 11096.5385389047
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=10",
+      "performance": 0.32666666666666666,
+      "accessibility": 0.79,
+      "bestPractices": 0.64,
+      "seo": 1,
+      "metrics": {
+        "lcp": 22223.396999999997,
+        "cls": 0.8196590522464478,
+        "tbt": 133.16666666666666,
+        "si": 12313.778338732562
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.co.kr/product/detail.html?product_no=169",
+      "performance": 0.33666666666666667,
+      "accessibility": 0.79,
+      "bestPractices": 0.64,
+      "seo": 1,
+      "metrics": {
+        "lcp": 21544.3895,
+        "cls": 0.8189642619059222,
+        "tbt": 124.66666666666667,
+        "si": 14716.261944910804
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.jp/",
+      "performance": 0.42333333333333334,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.57,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 10412.482856666667,
+        "cls": 0,
+        "tbt": 696.4999999999987,
+        "si": 7814.508263214445
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.jp/products/sebum-rebalancing-rx-131-ampoule",
+      "performance": 0.51,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.57,
+      "seo": 0.7966666666666667,
+      "metrics": {
+        "lcp": 15020.39073,
+        "cls": 0.0016159616982824008,
+        "tbt": 368.33333333333303,
+        "si": 7165.409605084163
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.sg/",
+      "performance": 0.6633333333333334,
+      "accessibility": 0.9,
+      "bestPractices": 0.57,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9287.410886666667,
+        "cls": 0.007678566204435082,
+        "tbt": 132,
+        "si": 6107.020651131407
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.sg/products/https-celladix-sg-products-celladix-131-pore-clearing-serum",
+      "performance": 0.73,
+      "accessibility": 0.87,
+      "bestPractices": 0.79,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8847.137666666667,
+        "cls": 0.021097883617524103,
+        "tbt": 74.33333333333333,
+        "si": 2201.3753688255997
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/",
+      "performance": 0.5366666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 9067.291933333334,
+        "cls": 0.1539693130985723,
+        "tbt": 80.33333333333394,
+        "si": 8198.630585745077
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/collections/best-sellers",
+      "performance": 0.57,
+      "accessibility": 0.9499999999999998,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8413.7635,
+        "cls": 0.1540031490469205,
+        "tbt": 72.16666666666667,
+        "si": 5915.652177430769
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://celladix.us/products/131-pore-clearing-serum",
+      "performance": 0.55,
+      "accessibility": 0.81,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 8531.360916666667,
+        "cls": 0.1539693130985723,
+        "tbt": 99.83333333333303,
+        "si": 6778.838736259601
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://hedn.kr/",
+      "performance": 0.5666666666666665,
+      "accessibility": 0.84,
+      "bestPractices": 0.7366666666666667,
+      "seo": 1,
+      "metrics": {
+        "lcp": 25569.078900702734,
+        "cls": 0.01394484574464116,
+        "tbt": 102,
+        "si": 11310.693417125927
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://hedn.kr/product/detail.html?product_no=64",
+      "performance": 0.4566666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.7233333333333333,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 30013.389239969885,
+        "cls": 0.1904905860202676,
+        "tbt": 137.5,
+        "si": 12870.097225800033
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.co.kr/",
+      "performance": 0.55,
+      "accessibility": 0.84,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 16444.990166666666,
+        "cls": 0.12948779175136452,
+        "tbt": 103,
+        "si": 8753.941430301658
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.co.kr/product/detail.html?product_no=74",
+      "performance": 0.4266666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 5303.064833333334,
+        "cls": 0.5098135914688031,
+        "tbt": 96.5,
+        "si": 13612.951163491476
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://housweet.kr/product/detail.html?product_no=71",
+      "performance": 0.37333333333333335,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9078.188333333334,
+        "cls": 0.5228907459080219,
+        "tbt": 73.66666666666667,
+        "si": 14199.25955865174
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/",
+      "performance": 0.48,
+      "accessibility": 0.83,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 10845.655730649822,
+        "cls": 0.15302037672800908,
+        "tbt": 166.16666666666606,
+        "si": 13652.3424539998
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/collections/best-sellers",
+      "performance": 0.5066666666666667,
+      "accessibility": 0.89,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8740.135083333333,
+        "cls": 0.15286919483113415,
+        "tbt": 54,
+        "si": 12031.786980382409
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.com/products/intimate-care-gel-for-women",
+      "performance": 0.44333333333333336,
+      "accessibility": 0.83,
+      "bestPractices": 0.5,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 11269.322,
+        "cls": 0.22197183807922113,
+        "tbt": 112.6112733333345,
+        "si": 15666.516629004467
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.jp/",
+      "performance": 0.5033333333333333,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.57,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8604.285999999998,
+        "cls": 0.0001511818968749406,
+        "tbt": 354.5,
+        "si": 7590.062361002591
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.jp/products/%E3%83%91%E3%83%92%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9F%E3%82%B9%E3%83%88",
+      "performance": 0.5133333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 21504.687745493564,
+        "cls": 0,
+        "tbt": 415.6534166666661,
+        "si": 6288.538762120053
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.sg/",
+      "performance": 0.5833333333333334,
+      "accessibility": 0.8000000000000002,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 6933.434016666669,
+        "cls": 0.007947972344666227,
+        "tbt": 83.99999999999939,
+        "si": 10404.456968201093
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://lactomedi.sg/products/intimate-care-gel-for-women",
+      "performance": 0.57,
+      "accessibility": 0.82,
+      "bestPractices": 0.54,
+      "seo": 0.85,
+      "metrics": {
+        "lcp": 10992.623828892822,
+        "cls": 0.007947972344666227,
+        "tbt": 17.333333333333332,
+        "si": 9770.476379807222
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.cleanery.co.kr/",
+      "performance": 0.6066666666666666,
+      "accessibility": 0.7233333333333333,
+      "bestPractices": 0.79,
+      "seo": 1,
+      "metrics": {
+        "lcp": 4350.777666666666,
+        "cls": 0.15719389230580974,
+        "tbt": 148.16666666666666,
+        "si": 9665.449336929503
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.cleanery.co.kr/product/detail.html?product_no=15",
+      "performance": 0.44,
+      "accessibility": 0.64,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 18865.797333333332,
+        "cls": 0.23894905146603118,
+        "tbt": 172.50000000000242,
+        "si": 11612.51947807691
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/",
+      "performance": 0.59,
+      "accessibility": 0.7600000000000001,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 7647.153976666668,
+        "cls": 0.022189471075225568,
+        "tbt": 128.9999999999994,
+        "si": 11397.780998087124
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/product/detail.html?product_no=129",
+      "performance": 0.4166666666666667,
+      "accessibility": 0.7399999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 8888.241666666665,
+        "cls": 0.356801483063212,
+        "tbt": 65.33333333333455,
+        "si": 10530.340915652803
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://m.curicell.kr/product/detail.html?product_no=33",
+      "performance": 0.41,
+      "accessibility": 0.7166666666666667,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 9357.254149999999,
+        "cls": 0.36320792475525804,
+        "tbt": 99.16666666666545,
+        "si": 11922.213049406177
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/",
+      "performance": 0.5966666666666667,
+      "accessibility": 0.7799999999999999,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 19550.178823333332,
+        "cls": 0.0038968728791039637,
+        "tbt": 92.33333333333364,
+        "si": 9545.509243543938
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=38",
+      "performance": 0.5766666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 14366.262206666666,
+        "cls": 0.07685251412254891,
+        "tbt": 127.16666666666788,
+        "si": 8200.498488214453
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://pronutrition.co.kr/product/detail.html?product_no=86",
+      "performance": 0.54,
+      "accessibility": 0.75,
+      "bestPractices": 0.79,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 7685.801988333335,
+        "cls": 0.1207054808054064,
+        "tbt": 116.83333333333333,
+        "si": 11928.124030251134
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/",
+      "performance": 0.42,
+      "accessibility": 0.87,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 19116.50692094274,
+        "cls": 0.3755315818712604,
+        "tbt": 45.166666666666664,
+        "si": 11647.18402012571
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=12",
+      "performance": 0.47000000000000003,
+      "accessibility": 0.83,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 15972.220097259114,
+        "cls": 0.2733545961147429,
+        "tbt": 116.66666666666667,
+        "si": 12524.894493839442
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=46",
+      "performance": 0.5533333333333333,
+      "accessibility": 0.81,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 17041.868983333337,
+        "cls": 0.005398089673650119,
+        "tbt": 111.33333333333333,
+        "si": 16469.244137799345
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://themedion.com/product/detail.html?product_no=99",
+      "performance": 0.4366666666666667,
+      "accessibility": 0.83,
+      "bestPractices": 0.75,
+      "seo": 0.66,
+      "metrics": {
+        "lcp": 17438.918166666666,
+        "cls": 0.3700053959488676,
+        "tbt": 114.83333333333333,
+        "si": 10004.569736907893
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/",
+      "performance": 0.5466666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 1,
+      "metrics": {
+        "lcp": 5912.9944,
+        "cls": 0.1775768101674433,
+        "tbt": 100.66666666666667,
+        "si": 11705.436176198637
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=14",
+      "performance": 0.52,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 12423.424811914005,
+        "cls": 0.1307326645478164,
+        "tbt": 172.4999999999994,
+        "si": 13357.813510770102
+      }
+    },
+    {
+      "device": "mobile",
+      "url": "https://wellit.co.kr/product/detail.html?product_no=202",
+      "performance": 0.5766666666666667,
+      "accessibility": 0.75,
+      "bestPractices": 0.75,
+      "seo": 0.92,
+      "metrics": {
+        "lcp": 13681.883599999996,
+        "cls": 0.06305659308256792,
+        "tbt": 137.66666666666666,
+        "si": 11624.47393133987
+      }
+    }
+  ],
+  "invalid": []
+}
