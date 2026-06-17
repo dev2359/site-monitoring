@@ -50,3 +50,6 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-05-31] housweet.kr 상품 상세 페이지 썸네일 lazy load 제거 (LCP 개선 위함)
 - [2026-06-12] curicell.kr promotion.js 파일 사용하지 않는(않을) 주석 제거
 - [2026-06-12] housweet.kr 71번 상품 옵션 선택 관련 js 수정
+- [2026-06-17] celladix.co.kr 대표이미지 lazy 제거 + fetchpriority 적용 (LCP)
+- [2026-06-17] celladix.co.kr 본문용 lazy 셀렉터 #prdDetail .cont img로 정정 (LCP 회귀 방지)
+- [2026-06-17] celladix.co.kr setInterval을 observer/이벤트로 전환 (TBT)
