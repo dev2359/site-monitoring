@@ -53,3 +53,13 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-06-17] celladix.co.kr 대표이미지 lazy 제거 + fetchpriority 적용 (LCP)
 - [2026-06-17] celladix.co.kr 본문용 lazy 셀렉터 #prdDetail .cont img로 정정 (LCP 회귀 방지)
 - [2026-06-17] celladix.co.kr setInterval을 observer/이벤트로 전환 (TBT)
+- [2026-06-28] celladix.co.kr 1. 픽셀 스크립트 통합 및 중복 제거 (TBT)
+- [2026-06-28] celladix.co.kr 인라인 <script> 4개 → 1개 IIFE로 통합, 공통 유틸 pixel-utils.js 분리
+- [2026-06-28] celladix.co.kr 2. 장바구니·네이버페이 중복 로직 제거 (TBT)
+- [2026-06-28] celladix.co.kr collectProductItems() 공통 함수화로 중복 코드 제거
+- [2026-06-28] celladix.co.kr 3. 상품 변수 감지 폴링 단축 (TTI)
+- [2026-06-28] celladix.co.kr setInterval 500ms → 200ms 단축
+- [2026-06-28] celladix.co.kr 4. 이벤트 바인딩 네임스페이스 적용 (TBT)
+- [2026-06-28] celladix.co.kr .click() → .on('click.pixelCart') 중복 바인딩 방지
+- [2026-06-28] celladix.co.kr 5. 첫 슬라이드 이미지 우선 로드 (LCP)
+- [2026-06-28] celladix.co.kr fetchpriority: high 설정, loading 속성 제거
