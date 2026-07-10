@@ -64,3 +64,4 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-06-28] celladix.co.kr 5. 첫 슬라이드 이미지 우선 로드 (LCP)
 - [2026-06-28] celladix.co.kr fetchpriority: high 설정, loading 속성 제거
 - [2026-07-06] housweet.kr 상세페이지 프로모션 세팅 이미지들 jpg -> webp로 변경하였으나 셀프로 lighthouse로 성능 확인하였을 때 성능이 오히려 저하되었음.... 다시 다른 액션 취할 예정
+- [2026-07-10] celladix.co.kr 불필요한 DOM 리플로우/리페인트 제거 (TBT)
