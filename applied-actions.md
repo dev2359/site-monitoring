@@ -67,3 +67,4 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-07-10] celladix.co.kr 불필요한 DOM 리플로우/리페인트 제거 (TBT)
 - [2026-07-10] celladix.co.kr 레이아웃 안정화 위한 CSS(min-height 셋팅) 예약영역 확보 (CLS)
 - [2026-07-14] celladix.co.kr 상세페이지 webp 배너 크기 변경 (LCP)
+- [2026-08-03] wellit.co.kr 대시보드 폼 연동 테스트 — 확인 후 삭제 예정
