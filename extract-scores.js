@@ -52,6 +52,8 @@ function extractFromManifestEntry(entry, device) {
     runtimeError = reportJson?.runtimeError || null;
   }
 
+  const environment = reportJson ? extractEnvironment(reportJson.lhr || reportJson) : null;
+
   const hasPerf = typeof perf === "number" && Number.isFinite(perf);
   const inferredRuntimeError =
     runtimeError ||
@@ -67,6 +69,7 @@ function extractFromManifestEntry(entry, device) {
     bestPractices: bp,
     seo,
     metrics,
+    environment,
     runtimeError: inferredRuntimeError,
   };
 }
@@ -161,8 +164,54 @@ function extractOneReport(reportJson) {
     finalUrl: root.finalUrl || root.requestedUrl || "(unknown)",
     scores: { performance, accessibility, bestPractices, seo },
     metrics: { lcp, cls, tbt, si },
+    environment: extractEnvironment(root),
     runtimeError: root.runtimeError || null,
   };
+}
+
+// 측정 환경 지표. cpuSlowdownMultiplier:1 이므로 러너의 CPU 성능이 TBT/SI 에 직접 반영되고,
+// Chrome 버전이 올라가면 지표가 미세하게 이동한다. 러너를 옮기거나 Chrome 이 업데이트되면
+// 점수 변화가 사이트 변경 때문인지 환경 변경 때문인지 사후에 구분할 수 없으므로 함께 기록한다.
+function extractEnvironment(root) {
+  const env = root.environment || {};
+  const ua = env.hostUserAgent || "";
+  const m = ua.match(/Chrome\/([\d.]+)/);
+  return {
+    benchmarkIndex: typeof env.benchmarkIndex === "number" ? env.benchmarkIndex : null,
+    chrome: m ? m[1] : null,
+    lighthouse: root.lighthouseVersion || null,
+  };
+}
+
+// device 별로 환경 지표를 요약. benchmarkIndex 는 회차 내 편차가 있어 평균/최소/최대를 함께 남긴다
+// (편차가 크면 그 회차에 CPU 경합이 있었다는 신호 — 측정값 신뢰도 판단에 쓸 수 있다).
+function summarizeEnvironment(items) {
+  const byDevice = {};
+  for (const it of items) {
+    const env = it.environment;
+    if (!env) continue;
+    const b = (byDevice[it.device] = byDevice[it.device] || {
+      bench: [],
+      chrome: new Set(),
+      lighthouse: new Set(),
+    });
+    if (typeof env.benchmarkIndex === "number") b.bench.push(env.benchmarkIndex);
+    if (env.chrome) b.chrome.add(env.chrome);
+    if (env.lighthouse) b.lighthouse.add(env.lighthouse);
+  }
+
+  const out = {};
+  for (const [device, b] of Object.entries(byDevice)) {
+    out[device] = {
+      benchmarkIndex: trimmedMean(b.bench) ?? null,
+      benchmarkIndexMin: b.bench.length ? Math.min(...b.bench) : null,
+      benchmarkIndexMax: b.bench.length ? Math.max(...b.bench) : null,
+      chrome: [...b.chrome].sort(),
+      lighthouse: [...b.lighthouse].sort(),
+      sampleCount: b.bench.length,
+    };
+  }
+  return out;
 }
 
 function trimmedMean(values) {
@@ -255,6 +304,7 @@ function loadReports({ dir, device }) {
         bestPractices: extracted.scores.bestPractices,
         seo: extracted.scores.seo,
         metrics: extracted.metrics,
+        environment: extracted.environment,
       });
     }
   }
@@ -300,6 +350,9 @@ function buildSummary(allItems) {
   return {
     generatedAt: new Date().toISOString(),
     thresholds: THRESHOLDS,
+    // 측정 환경 스냅샷. 러너 이전(GitHub US → 춘천)이나 Chrome 업데이트로 지표가 이동했을 때
+    // history 를 뒤져 원인을 특정할 수 있도록 회차마다 남긴다.
+    environment: summarizeEnvironment(allItems),
     overall: {
       status: overallStatus,
       worst: worst
