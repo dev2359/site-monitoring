@@ -6,13 +6,23 @@ name: Lighthouse Config Test (1 URL, fast)
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "측정을 실행할 러너 (A/B 비교용)"
+        required: true
+        default: ubuntu-latest
+        type: choice
+        options:
+          - ubuntu-latest   # GitHub 호스티드 (US/EU) — 현재 운영 환경
+          - chuncheon       # self-hosted (OCI ap-chuncheon-1) — 국내
 
 permissions:
   contents: read
 
 jobs:
   config_test:
-    runs-on: ubuntu-latest
+    # 커스텀 라벨 하나만으로 매칭됨 — self-hosted 러너는 chuncheon 라벨을 갖고 등록한다.
+    runs-on: ${{ inputs.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

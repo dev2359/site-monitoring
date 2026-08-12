@@ -1,5 +1,8 @@
 .claude/
 node_modules/
+# lhci 로컬 실행 시 생기는 작업 디렉터리 / 측정 산출물
+.lighthouseci/
+results/
 .env
 .env.local
 .DS_Store
