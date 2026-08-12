@@ -6,7 +6,8 @@
 //   domestic — 국내 hosting (.kr/.co.kr + themedion.com, bifigen.com). 나중에 Seoul runner 로.
 //   global   — 해외 hosting (lactomedi.{com,sg,jp}, celladix.{us,sg,jp}). GitHub runner(US) 유지.
 //
-// mobile 은 일부 도메인이 m. 서브도메인을 씀 (m.curicell.kr, m.cleanery.co.kr).
+// mobile 은 일부 도메인이 m. 서브도메인을 씀 (m.cleanery.co.kr).
+// curicell 은 m. 제거 — mobile 도 curicell.kr 로 측정.
 
 const domesticCommon = [
   "https://wellit.co.kr",
@@ -65,9 +66,9 @@ module.exports = {
   mobile: {
     domestic: [
       ...domesticCommon,
-      "https://m.curicell.kr",
-      "https://m.curicell.kr/product/detail.html?product_no=33",
-      "https://m.curicell.kr/product/detail.html?product_no=129",
+      "https://curicell.kr",
+      "https://curicell.kr/product/detail.html?product_no=33",
+      "https://curicell.kr/product/detail.html?product_no=129",
       "https://m.cleanery.co.kr",
       "https://m.cleanery.co.kr/product/detail.html?product_no=15",
     ],
