@@ -297,8 +297,15 @@ node send-slack.js     # 실제 발송 (SLACK_BOT_TOKEN/CHANNEL_ID 필요)
 ### 3) URL 오타/리다이렉트
 
 - URL 오타는 측정 실패/왜곡의 주요 원인입니다.
-- 리다이렉트(예: `curicell.kr` → `m.curicell.kr`)가 있어도, `extract-scores.js` 는 측정에 사용한 **요청 URL(`requestedUrl`)** 을 기준으로 키를 잡아 device(desktop/mobile) 와 일치시킵니다. 과거에는 개별 LHR 파싱 경로가 `finalUrl`(리다이렉트 후 URL)을 써서 데스크탑으로 측정한 `curicell.kr` 이 `m.curicell.kr` 로 잡혀 모바일처럼 보이는 오판정이 있었으나 수정됨.
-- 그래도 새 URL 추가 시에는 `urls.js` 의 항목이 실제 최종 도달 도메인과 device 의도에 맞는지 한 번 확인하세요.
+- 리다이렉트(예: 모바일 UA 로 `cleanery.co.kr` 요청 → `m.cleanery.co.kr` 301)가 있어도, `extract-scores.js` 는 측정에 사용한 **요청 URL(`requestedUrl`)** 을 기준으로 키를 잡아 device(desktop/mobile) 와 일치시킵니다. 과거에는 개별 LHR 파싱 경로가 `finalUrl`(리다이렉트 후 URL)을 써서 데스크탑으로 측정한 URL 이 `m.*` 로 잡혀 모바일처럼 보이는 오판정이 있었으나 수정됨.
+- **리다이렉트 자체는 측정값을 부풀립니다.** `requestedUrl` 정규화는 집계 키를 바로잡을 뿐, 리다이렉트 왕복(DNS+TCP+TLS+3xx)은 그대로 LCP 에 얹힙니다. 따라서 측정 대상은 **최종 도달 URL 로 직접 지정**해야 합니다.
+- 실제 사례 — `m.curicell.kr` 은 본 도메인으로 넘기는 302 만 남은 상태여서, mobile curicell 3개 URL 이 실제 페이지 대신 리다이렉트를 측정하고 있었습니다. `m.` 을 제거해 `curicell.kr` 로 직접 측정하도록 정정했습니다. 반대로 `m.cleanery.co.kr` 은 별도 모바일 사이트가 살아 있어(200) 그대로 유지합니다.
+- 새 URL 추가 시에는 `urls.js` 의 항목이 실제 최종 도달 도메인과 device 의도에 맞는지 확인하세요. 확인 방법:
+
+```bash
+UA='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+curl -s -o /dev/null -A "$UA" -w '%{http_code} -> %{redirect_url}\n' "<확인할 URL>"
+```
 
 ## 운영 팁
 

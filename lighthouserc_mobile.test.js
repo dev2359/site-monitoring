@@ -6,7 +6,9 @@ module.exports = {
   ci: {
     collect: {
       ...base.ci.collect,
-      url: ["https://m.curicell.kr/product/detail.html?product_no=129"],
+      // desktop 검증 config 와 같은 URL 을 쓴다 — 러너 A/B 비교 시 device 간 결과도 나란히 볼 수 있다.
+      // m.curicell.kr 은 본 도메인으로 넘기는 302 만 남아 측정 대상에서 제거됨 (urls.js 참고).
+      url: ["https://curicell.kr/product/detail.html?product_no=129"],
       numberOfRuns: 3,
     },
     upload: base.ci.upload,
