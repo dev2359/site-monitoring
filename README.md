@@ -230,7 +230,26 @@ Master DB 의 inline DB 는 매주 새로 만들어지므로 사용자 정렬/�
 
 > 주의 1: Lighthouse 공식 Mobile 프리셋(CPU 4x, Slow 4G)보다 느슨하므로, 본 측정 점수는 PageSpeed Insights/Chrome DevTools 기본 Mobile 결과보다 높게 나옵니다. 실제 자사 이용자(국내 LTE/5G·상위 iPhone) 환경에 맞춘 의도적인 설정입니다.
 >
-> 주의 2: `simulate` 로 네트워크 throttle 은 로컬과 맞췄지만, **GitHub runner(US/EU)의 한국 서버까지 실제 RTT(server-side latency)는 못 줄입니다** — 국내 사이트의 LCP 가 로컬 대비 높게 나오는 주원인. 근본 해결은 국내(Seoul) self-hosted runner 로 domestic 측정을 옮기는 것 (workflow matrix 의 `runner` 만 변경하면 됨).
+> 주의 2: `simulate` 는 네트워크 throttle 을 모델값으로 대체하지만, **측정 지점에서 서버까지의 실제 RTT 는 못 줄입니다.** origin 별 서버 응답 시간이 실측값으로 시뮬레이션에 반영되고, 그 값이 요청 체인마다 다시 부과되기 때문입니다. 그래서 **측정 위치가 사이트 서버와 가까울수록 빠르게 측정됩니다.**
+
+### 측정 위치 (2026-09-08 전환)
+
+`domestic` 은 **춘천 self-hosted runner**(라벨 `chuncheon`, OCI `ap-chuncheon-1`), `global` 은 **GitHub 호스티드 runner** 에서 측정합니다. 목적은 "점수를 잘 받는 것"이 아니라 **각 사이트를 실사용자와 가까운 곳에서 재는 것** 입니다 — 국내몰 서버는 한국, 해외몰(Shopify) 원본은 미국에 있습니다.
+
+전환 전에는 국내몰도 GitHub runner(US)에서 측정해 태평양 왕복 지연이 LCP 에 누적됐습니다. 같은 URL·같은 시각·같은 설정으로 양쪽 러너를 비교한 결과(`curicell.kr` 상품 상세):
+
+| | 춘천 | GitHub(US) |
+|---|---:|---:|
+| desktop perf / LCP | 42 / 4,384ms | 34 / 6,246ms |
+| mobile perf / LCP | 45 / **9,878ms** | 36 / **25,592ms** |
+
+> 주의 3: **CLS 는 전환 후 오히려 올라갑니다** (위 비교에서 desktop 0.272 → 0.358). 페이지가 빨리 로드되면 늦게 도착하는 요소가 이미 그려진 콘텐츠를 밀어내며 레이아웃 시프트가 더 많이 관측됩니다. 문제가 늘어난 것이 아니라 **느린 네트워크에 가려져 있던 것이 드러난 것** 입니다.
+>
+> 주의 4: 춘천 러너는 1대이므로 **domestic desktop/mobile 이 순차 실행**됩니다. 전체 소요 시간은 늘지만, 같은 머신에서 Chrome 두 세션이 동시에 돌면 CPU 경합으로 TBT/SI 가 오염되므로 의도된 구성입니다. `global` 2 jobs 는 GitHub runner 에서 병렬로 돕니다.
+>
+> 주의 5: 전환으로 국내 URL 지표가 크게 이동하므로 **전환 전 스냅샷과 비교하면 안 됩니다.** `EARLIEST_BASELINE_DATE` 를 `2026-09-08` 로 올려 비교 윈도에서 배제했습니다 — `evaluate-applied-actions.js` 와 `build-3m-table.js` **두 파일 모두** 에 있으니 함께 유지하세요.
+
+러너 구축·자동 종료 스크립트는 [`scripts/`](scripts/) 참고.
 
 ## 집계/판정 로직
 

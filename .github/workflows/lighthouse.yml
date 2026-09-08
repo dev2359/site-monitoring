@@ -13,8 +13,15 @@ permissions:
   contents: write
 
 jobs:
-  # device(desktop/mobile) × scope(domestic/global) = 4 jobs 병렬.
-  # domestic 의 runner 를 나중에 self-hosted(Seoul) 로 바꾸면 국내 사이트만 한국 환경에서 측정됨.
+  # device(desktop/mobile) × scope(domestic/global) = 4 jobs.
+  #
+  # domestic 은 춘천 self-hosted runner(라벨 chuncheon, OCI ap-chuncheon-1), global 은 GitHub
+  # 호스티드 러너에서 측정한다. 각 사이트를 실사용자와 가까운 곳에서 재기 위한 것 —
+  # 국내몰 서버는 한국, 해외몰(Shopify) 원본은 미국에 있다.
+  #
+  # 춘천 러너는 1대이므로 domestic desktop/mobile 이 순차 실행된다. 전체 소요 시간은 늘지만
+  # 같은 머신에서 Chrome 두 세션이 동시에 돌면 CPU 경합으로 TBT/SI 가 오염되므로 이게 맞다.
+  # global 2 jobs 는 GitHub 러너에서 그대로 병렬 실행된다.
   lighthouse:
     name: lighthouse (${{ matrix.device }}/${{ matrix.scope }})
     runs-on: ${{ matrix.runner }}
@@ -22,9 +29,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { device: desktop, scope: domestic, runner: ubuntu-latest }
+          - { device: desktop, scope: domestic, runner: chuncheon }
           - { device: desktop, scope: global,   runner: ubuntu-latest }
-          - { device: mobile,  scope: domestic, runner: ubuntu-latest }
+          - { device: mobile,  scope: domestic, runner: chuncheon }
           - { device: mobile,  scope: global,   runner: ubuntu-latest }
     steps:
       - name: Checkout repository

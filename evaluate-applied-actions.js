@@ -41,7 +41,12 @@ const EVAL_LCP_REL = Number(process.env.EVAL_LCP_REL || "0.10");
 const EVAL_TBT_REL = Number(process.env.EVAL_TBT_REL || "0.10");
 const EVAL_CLS_ABS = Number(process.env.EVAL_CLS_ABS || "0.02");
 const EVAL_PERF_PT = Number(process.env.EVAL_PERF_PT || "5");
-const EARLIEST_BASELINE_DATE = process.env.EARLIEST_BASELINE_DATE || "2026-04-22";
+// 2026-09-08: domestic 측정을 GitHub 러너(US) → 춘천 self-hosted 러너로 전환. 측정 위치가
+// 바뀌어 국내 URL 의 LCP/SI 가 큰 폭으로 하락(개선)하므로, 전환 이전 스냅샷과 비교하면 그
+// 변화를 적용 액션의 성과로 오인한다. 마지막 US 러너 스냅샷이 2026-09-06 이라 floor 를
+// 2026-09-08 로 올려 전환 전 데이터를 비교 윈도에서 배제한다.
+// (이전 값 "2026-04-22" 는 collapsed era 차단용이었음)
+const EARLIEST_BASELINE_DATE = process.env.EARLIEST_BASELINE_DATE || "2026-09-08";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

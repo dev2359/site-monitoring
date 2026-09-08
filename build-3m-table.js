@@ -31,7 +31,10 @@ const COMPARE_LABEL =
 
 // baseline floor: 측정 환경/URL 셋이 안정화되기 전 스냅샷은 비교 대상에서 제외.
 // 이력이 충분히 쌓이면 자연스럽게 이 값보다 늦은 스냅샷이 선택된다.
-const EARLIEST_BASELINE_DATE = process.env.EARLIEST_BASELINE_DATE || "2026-04-22";
+// 2026-09-08: domestic 측정을 GitHub 러너(US) → 춘천 self-hosted 러너로 전환.
+// 측정 위치 변경으로 국내 URL 지표가 크게 이동하므로 전환 전 스냅샷과 비교하면 안 된다.
+// evaluate-applied-actions.js 의 같은 상수와 반드시 함께 유지할 것.
+const EARLIEST_BASELINE_DATE = process.env.EARLIEST_BASELINE_DATE || "2026-09-08";
 
 // per-URL 8주 sparkline 용 lookback 길이.
 const TREND_LAST_N = parseInt(process.env.TREND_LAST_N || "8", 10);
