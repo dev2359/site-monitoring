@@ -137,9 +137,13 @@ sudo -u "$RUNNER_USER" \
     --unattended --replace
 
 log "systemd 서비스 등록 + 시작"
-"$RUNNER_HOME/svc.sh" install "$RUNNER_USER"
-"$RUNNER_HOME/svc.sh" start
-"$RUNNER_HOME/svc.sh" status || true
+# svc.sh 는 내부에서 상대 경로를 쓰므로 반드시 러너 루트 디렉터리 안에서 실행해야 한다.
+# 절대 경로로 호출하면 "Must run from runner root or install is corrupt" 로 실패한다.
+cd "$RUNNER_HOME"
+./svc.sh install "$RUNNER_USER"
+./svc.sh start
+./svc.sh status || true
+cd - >/dev/null
 
 # ── 8. 스모크 테스트 ─────────────────────────────────────────────────────────
 # 워크플로를 돌리기 전에 이 VM 에서 Chrome+Lighthouse 가 실제로 동작하는지 확인한다.
