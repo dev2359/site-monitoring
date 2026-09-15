@@ -19,9 +19,20 @@
 #
 set -euo pipefail
 
+# 기본값은 2026-09-09 / 09-13 두 회차의 실측 타이밍으로 확정한 값이다 (추정치 아님).
+#
+#   cron 지연     : 예약 16:00 UTC 대비 실제 시작 19:11(3h11m) / 18:41(2h41m)
+#                   → GitHub 예약 워크플로는 정시에 요청이 몰려 크게 밀린다.
+#   domestic 측정 : 2h17m / 2h16m (mobile 67분 + desktop 68분, 순차)
+#   job 사이 간격 : 2초 (러너 1대라 순차 실행)
+#
+# GRACE 270분: 최대 관측 지연 3h11m + 여유. 이전 값 90분이었다면 job 도착 전에
+#              스스로 꺼져 매 회차를 날렸을 것이다.
+# IDLE 30분  : 실측 job 간격이 2초라 충분히 안전.
+# MAX 540분  : GRACE 4.5h + 측정 2.3h + IDLE 0.5h = 7.3h 를 넘는 상한.
 IDLE_MINUTES="${IDLE_MINUTES:-30}"
-GRACE_MINUTES="${GRACE_MINUTES:-90}"
-MAX_UPTIME_MIN="${MAX_UPTIME_MIN:-360}"
+GRACE_MINUTES="${GRACE_MINUTES:-270}"
+MAX_UPTIME_MIN="${MAX_UPTIME_MIN:-540}"
 CHECK_MINUTES="${CHECK_MINUTES:-5}"
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -142,7 +153,18 @@ EOF
 
 systemctl daemon-reload
 systemctl enable --now lh-idle-shutdown.timer
-systemctl enable --now lh-max-uptime.timer
+
+# max-uptime 은 --now 로 켜지 않는다. OnBootSec 기준 시각이 이미 지난 상태(예: 오래 가동 중인
+# 인스턴스에 설치)에서 --now 를 주면 타이머가 즉시 발화해 그 자리에서 전원이 내려간다.
+# enable 만 해두면 다음 부팅에 정상적으로 무장된다 — "부팅 후 N분" 이라는 의도와도 일치한다.
+systemctl enable lh-max-uptime.timer
+UP_MIN=$(( $(cut -d. -f1 /proc/uptime) / 60 ))
+if (( UP_MIN < MAX_UPTIME_MIN )); then
+  systemctl start lh-max-uptime.timer
+  echo "  max-uptime 타이머 즉시 무장 (현재 uptime ${UP_MIN}분 < ${MAX_UPTIME_MIN}분)"
+else
+  echo "  max-uptime 타이머는 다음 부팅부터 적용 (현재 uptime ${UP_MIN}분 ≥ ${MAX_UPTIME_MIN}분 — 지금 켜면 즉시 종료됨)"
+fi
 
 cat <<EOF
 
