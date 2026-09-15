@@ -183,14 +183,51 @@ function extractEnvironment(root) {
   };
 }
 
-// device 별로 환경 지표를 요약. benchmarkIndex 는 회차 내 편차가 있어 평균/최소/최대를 함께 남긴다
-// (편차가 크면 그 회차에 CPU 경합이 있었다는 신호 — 측정값 신뢰도 판단에 쓸 수 있다).
+// scope(domestic/global) 판별용 URL → scope 맵. urls.js 가 단일 출처다.
+// 측정 결과의 URL 은 후행 슬래시가 붙어 오므로(https://bifigen.com/) 정규화해서 대조한다.
+const SCOPE_BY_URL = (() => {
+  const map = new Map();
+  try {
+    const urls = require("./urls.js");
+    for (const device of Object.keys(urls)) {
+      for (const scope of Object.keys(urls[device])) {
+        for (const u of urls[device][scope]) map.set(`${device}|${normUrl(u)}`, scope);
+      }
+    }
+  } catch (e) {
+    console.warn("⚠️ urls.js 로드 실패 — environment scope 분리 불가:", e?.message || e);
+  }
+  return map;
+})();
+
+function normUrl(u) {
+  return String(u || "").trim().replace(/\/+$/, "").toLowerCase();
+}
+
+function scopeOf(device, url) {
+  return SCOPE_BY_URL.get(`${device}|${normUrl(url)}`) || "unknown";
+}
+
+// device × scope 별로 환경 지표를 요약.
+//
+// scope 로도 쪼개는 이유: 2026-09-08 전환 이후 domestic 은 춘천 self-hosted runner,
+// global 은 GitHub 호스티드 runner 에서 측정된다. device 로만 묶으면 서로 다른 머신의
+// benchmarkIndex 가 한 평균에 섞여, 점수가 흔들렸을 때 어느 러너의 CPU 문제인지 구분할 수
+// 없다 (실제로 해외몰 점수 하락 원인을 찾을 때 이 지표를 못 쓰고 TBT 로 우회 추론해야 했다).
+//
+// benchmarkIndex 는 회차 내 편차가 있어 평균/최소/최대를 함께 남긴다 — 편차가 크면 그 회차에
+// CPU 경합이 있었다는 신호이므로 측정값 신뢰도 판단에 쓸 수 있다.
 function summarizeEnvironment(items) {
-  const byDevice = {};
+  const groups = {};
   for (const it of items) {
     const env = it.environment;
     if (!env) continue;
-    const b = (byDevice[it.device] = byDevice[it.device] || {
+    const device = it.device;
+    const scope = scopeOf(device, it.url);
+    const key = `${device}|${scope}`;
+    const b = (groups[key] = groups[key] || {
+      device,
+      scope,
       bench: [],
       chrome: new Set(),
       lighthouse: new Set(),
@@ -201,8 +238,8 @@ function summarizeEnvironment(items) {
   }
 
   const out = {};
-  for (const [device, b] of Object.entries(byDevice)) {
-    out[device] = {
+  for (const b of Object.values(groups)) {
+    (out[b.device] = out[b.device] || {})[b.scope] = {
       benchmarkIndex: trimmedMean(b.bench) ?? null,
       benchmarkIndexMin: b.bench.length ? Math.min(...b.bench) : null,
       benchmarkIndexMax: b.bench.length ? Math.max(...b.bench) : null,

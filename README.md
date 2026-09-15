@@ -251,6 +251,28 @@ Master DB 의 inline DB 는 매주 새로 만들어지므로 사용자 정렬/�
 
 러너 구축·자동 종료 스크립트는 [`scripts/`](scripts/) 참고.
 
+### 측정 환경 기록 (`summary.json` → `environment`)
+
+`cpuSlowdownMultiplier: 1` 이라 **러너의 CPU 성능이 TBT/SI 에 직접 반영**되고, Chrome 버전이 오르면 지표가 이동합니다. 점수 변화가 사이트 변경 때문인지 환경 변경 때문인지 사후에 구분하려면 기록이 필요하므로, 회차마다 `device × scope` 로 남깁니다.
+
+```
+environment.desktop.domestic = { benchmarkIndex, benchmarkIndexMin, benchmarkIndexMax,
+                                 chrome[], lighthouse[], sampleCount }
+environment.desktop.global   = { ... }
+environment.mobile.domestic  = { ... }
+environment.mobile.global    = { ... }
+```
+
+**`scope` 로도 쪼개는 이유** — 전환 이후 `domestic` 은 춘천, `global` 은 GitHub 러너라 **서로 다른 머신**입니다. `device` 로만 묶으면 두 러너의 `benchmarkIndex` 가 한 평균에 섞여 어느 쪽 CPU 문제인지 구분할 수 없습니다. scope 는 `urls.js` 를 단일 출처로 URL 을 대조해 판별합니다.
+
+**읽는 법**
+
+- `benchmarkIndexMax - Min` 이 크면 그 회차에 **CPU 경합**이 있었다는 신호입니다. 그 회차의 TBT·SI 는 신뢰도가 낮습니다.
+- `benchmarkIndex` 자체가 이전 회차 대비 크게 떨어졌다면 러너 머신 사정이 바뀐 것이므로, 점수 하락을 사이트 문제로 해석하면 안 됩니다.
+- 참고 기준값: 춘천 러너 desktop 약 3,000 / GitHub 호스티드 러너 desktop 약 2,460.
+
+> 실제 사례 — 2026-09-13 회차에서 `lactomedi.sg` 데스크톱 점수가 68 → 56 으로 떨어졌는데, LCP 는 3,718 → 3,368ms 로 오히려 개선됐고 TBT 만 96 → 242ms 로 튀었습니다. 사이트가 아니라 **GitHub 러너의 CPU 변동**이 원인입니다. 해외 URL 의 회차 간 점수 변동폭은 `lactomedi.sg` 기준 ±20 점이라, 5~6 점 하락은 노이즈 범위입니다.
+
 ## 집계/판정 로직
 
 `extract-scores.js`에서:
