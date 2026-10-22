@@ -88,3 +88,4 @@ vendor.js 코드 스플리팅 + defer (TBT)
 - [2026-08-24] cleanery.co.kr txt_rv min-height 고정 (CLS)
 - [2026-08-24] cleanery.co.kr txt_review.js 셀렉터 오류 수정 (안정성)
 - [2026-08-24] cleanery.co.kr lozad.js head 하단 이동 + defer (LCP)
+- [2026-10-22] housweet.kr 상품 썸네일 aspect-ratio 적용
