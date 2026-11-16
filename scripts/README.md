@@ -6,7 +6,7 @@
 
 ## 실행 순서
 
-새 인스턴스에서 딱 두 번 실행한다.
+새 인스턴스에서 세 번 실행한다.
 
 ```bash
 # 1) 러너 설치 — Chrome, Node, actions-runner 등록, systemd 서비스, 스모크 테스트
@@ -15,9 +15,48 @@ sudo -E bash scripts/setup-runner.sh
 
 # 2) 자동 종료 설치 — 비용 절감의 핵심
 sudo bash scripts/setup-auto-shutdown.sh
+
+# 3) 측정 트리거 설치 — 회차 누락 방지의 핵심
+export GH_TOKEN=<Fine-grained PAT, Actions = Read and write>
+sudo -E bash scripts/setup-dispatch.sh
 ```
 
 `RUNNER_TOKEN` 은 **발급 후 1시간 만료**라 실행 직전에 받는다.
+
+## setup-dispatch.sh
+
+**GitHub 예약 워크플로(schedule)를 쓰지 않고 VM 이 직접 측정을 트리거한다.**
+
+이 저장소에서 예약 실행이 **4~7시간씩 밀린다.** 특정 워크플로의 문제가 아니라 전체가 같이 밀린다 — `railway-healthcheck`(예약 00:00)는 03:57~05:26 에, `history-compact`(예약 01:00)는 05:25~07:19 에 돌았다. GitHub 의 예약 실행은 보장된 스케줄이 아니라 best-effort 큐이기 때문이다.
+
+그래서 두 가지가 깨진다.
+
+1. VM 이 15:45 UTC 에 깨어 유예 구간(`GRACE_MINUTES`) 안에 job 이 안 오면 **스스로 꺼져 회차가 통째로 누락된다.** 10/28 · 11/04 · 11/11 · 11/15 가 그렇게 날아갔다.
+2. 누락되지 않아도 **VM 이 4~7시간을 대기로 날린다.** 실제 측정은 2시간 16분인데 가동은 7시간이었다.
+
+OCI 스케줄러가 깨운 직후 VM 이 `workflow_dispatch` 를 호출하면 러너가 이미 켜져 있으므로 지연이 사실상 0 이 되고, 가동 시간이 **측정 시간 + 유휴 30분**으로 수렴한다.
+
+| | |
+|---|---|
+| 트리거 | 부팅 후 3분 (systemd 타이머) |
+| 인증 | Fine-grained PAT — `Actions = Read and write`, 이 저장소만 |
+| 설정 파일 | `/etc/lh-dispatch.env` (600, root) |
+
+### 가드 3겹
+
+VM 은 측정 외의 이유로도 부팅된다(수동 시작, 재부팅). 그때 측정이 멋대로 돌지 않도록 막는다.
+
+1. **요일** — UTC 일·수(= KST 월·목)가 아니면 건너뜀
+2. **시간 창** — UTC 15~17 시가 아니면 건너뜀 (OCI 가 15:45 에 깨움)
+3. **중복** — 최근 6시간 내 실행이 있으면 건너뜀
+
+3번 조회가 실패하면 **가드를 생략하고 트리거한다.** 중복 실행보다 회차 누락이 더 비싸기 때문이다.
+
+### 설치 후
+
+트리거가 한 회차 정상 동작한 것을 확인한 뒤 `lighthouse.yml` 의 `schedule` 블록을 제거한다. 둘을 같이 두면 지연된 예약 실행이 중복 회차를 만들거나, `concurrency: cancel-in-progress: true` 때문에 진행 중인 측정을 취소시킬 수 있다.
+
+**PAT 가 만료되면 트리거가 조용히 멈춘다** (`journalctl -t lh-dispatch` 에 HTTP 401 로 남음). 만료일을 기록해 둘 것. 갱신은 `/etc/lh-dispatch.env` 의 `GH_TOKEN` 만 교체하면 즉시 적용된다.
 
 ## 대상 환경
 
